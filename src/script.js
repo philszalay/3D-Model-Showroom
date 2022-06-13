@@ -6,8 +6,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader'
 import Stats from 'three/examples/jsm/libs/stats.module'
 
-import model from './../static/gltfs/01.gltf'
-import hdr from './../static/hdris/belfast_farmhouse_4k.hdr'
+const gltfPath = './gltfs/01.gltf'
+const hdrPath = './hdris/belfast_farmhouse_4k.hdr'
 
 /**
  * Base
@@ -83,7 +83,7 @@ window.addEventListener('dblclick', () => {
 // Load a glTF resource
 loader.load(
   // resource URL
-  model,
+  gltfPath,
   // called when the resource is loaded
   function (gltf) {
     scene.add(gltf.scene)
@@ -111,7 +111,7 @@ pmremGenerator.compileEquirectangularShader()
 
 new RGBELoader()
   .setDataType(THREE.UnsignedByteType)
-  .load(hdr, function (texture) {
+  .load(hdrPath, function (texture) {
     const envMap = pmremGenerator.fromEquirectangular(texture).texture
 
     // scene.background = envMap;
