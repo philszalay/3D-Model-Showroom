@@ -1,7 +1,8 @@
-# Three.js Journey
+# 3D Model Showroom
+https://philszalay.github.io/3D-Model-Showroom/
 
 ## Setup
-Download [Node.js](https://nodejs.org/en/download/).
+Download [Node.js 16](https://nodejs.org/en/download/).
 Run this followed commands:
 
 ``` bash
