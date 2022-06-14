@@ -13,17 +13,26 @@ const hdrPath = './hdris/belfast_farmhouse_4k.hdr'
  * Loading Manager
  */
 const loadingManager = new THREE.LoadingManager()
+const loadingAnimationContainer = document.querySelector('.loading-animation-container')
+const progressBar = document.getElementById('progress-bar')
 
 loadingManager.onStart = () => {
   console.log('Loading started')
 }
 
-loadingManager.onProgress = () => {
-  console.log('Loading progress')
+loadingManager.onProgress = (url, loaded, total) => {
+  progressBar.value = (loaded / total) * 100
 }
 
 loadingManager.onLoad = () => {
-  console.log('Loaded')
+  setTimeout(() => {
+    loadingAnimationContainer.style.display = 'none'
+
+    tick()
+
+    // Intro animation
+    gsap.fromTo(camera.position, { x: -25, y: 25, z: 25 }, { x: camera.position.x, y: 0, z: initialCameraPositionZ, duration: 2 })
+  }, 500)
 }
 
 loadingManager.onError = (e) => {
@@ -105,8 +114,6 @@ loader.load(
   function (gltf) {
     scene.add(gltf.scene)
 
-    // Intro animation
-    gsap.fromTo(camera.position, { x: -25, y: 25, z: 25 }, { x: camera.position.x, y: 0, z: initialCameraPositionZ, duration: 2 })
     // gltf.animations // Array<THREE.AnimationClip>
     // gltf.scene // THREE.Group
     // gltf.scenes // Array<THREE.Group>
@@ -142,5 +149,3 @@ const tick = () => {
   // Call tick again on the next frame
   window.requestAnimationFrame(tick)
 }
-
-tick()
