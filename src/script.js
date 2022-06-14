@@ -10,8 +10,25 @@ const gltfPath = './gltfs/01.gltf'
 const hdrPath = './hdris/belfast_farmhouse_4k.hdr'
 
 /**
- * Base
+ * Loading Manager
  */
+const loadingManager = new THREE.LoadingManager()
+
+loadingManager.onStart = () => {
+  console.log('Loading started')
+}
+
+loadingManager.onProgress = () => {
+  console.log('Loading progress')
+}
+
+loadingManager.onLoad = () => {
+  console.log('Loaded')
+}
+
+loadingManager.onError = (e) => {
+  console.log('Error', e)
+}
 
 /**
  * Sizes
@@ -28,7 +45,7 @@ const canvas = document.querySelector('canvas.webgl')
 const scene = new THREE.Scene()
 
 // glTF
-const loader = new GLTFLoader()
+const loader = new GLTFLoader(loadingManager)
 
 // Stats
 const stats = Stats()
@@ -95,21 +112,13 @@ loader.load(
     // gltf.scenes // Array<THREE.Group>
     // gltf.cameras // Array<THREE.Camera>
     // gltf.asset // Object
-  },
-  // called while loading is progressing
-  function (xhr) {
-    console.log((xhr.loaded / xhr.total * 100) + '% loaded')
-  },
-  // called when loading has errors
-  function (error) {
-    console.log('An error happened', error)
   }
 )
 
 const pmremGenerator = new THREE.PMREMGenerator(renderer)
 pmremGenerator.compileEquirectangularShader()
 
-new RGBELoader()
+new RGBELoader(loadingManager)
   .setDataType(THREE.UnsignedByteType)
   .load(hdrPath, function (texture) {
     const envMap = pmremGenerator.fromEquirectangular(texture).texture
