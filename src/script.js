@@ -3,8 +3,11 @@ import * as THREE from 'three'
 import gsap from 'gsap'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader'
 import Stats from 'three/examples/jsm/libs/stats.module'
+import { TextBufferGeometry, TextGeometry } from 'three/examples/jsm/geometries/TextGeometry'
 import * as dat from 'dat.gui'
+import { GeometryUtils, TangentSpaceNormalMap, Vector3 } from 'three'
 
 const gltfPath = './gltfs/01.gltf'
 
@@ -27,17 +30,18 @@ loadingManager.onLoad = () => {
   setTimeout(() => {
     loadingAnimationContainer.style.display = 'none'
 
-    tick()
+    window.requestAnimationFrame(tick)
 
     // Intro animation
     gsap.fromTo(camera.position, { x: -25, y: 25, z: 25 }, {
       x: camera.position.x,
-      y: 5,
+      y: initialCameraPositionY,
       z: initialCameraPositionZ,
       duration: 2,
       onComplete: () => {
-        scene.add(spotLightLeft, spotLightRight, spotLightRightDown, hemisphereLight)
-      }
+        // scene.add(spotLightLeft, spotLightRight, spotLightRightDown, hemisphereLight)
+      },
+      ease: 'power1.inOut'
     })
   }, 500)
 }
@@ -82,8 +86,11 @@ const showcase = new THREE.Group()
 showcase.position.y = positionY
 scene.add(showcase)
 
+const text = new THREE.Group()
+scene.add(text)
+
 // glTF
-const loader = new GLTFLoader(loadingManager)
+const gltfLoader = new GLTFLoader(loadingManager)
 
 // Stats
 const stats = Stats()
@@ -97,6 +104,7 @@ document.body.appendChild(stats.domElement)
 const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 1000)
 
 const initialCameraPositionZ = 25
+const initialCameraPositionY = 5
 camera.position.z = initialCameraPositionZ
 scene.add(camera)
 
@@ -109,6 +117,20 @@ const renderer = new THREE.WebGLRenderer({
 
 renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+// renderer.shadowMap.enabled = true
+
+/**
+ * Raycaster
+ */
+const raycaster = new THREE.Raycaster()
+const pointer = new THREE.Vector2()
+
+function onPointerMove (event) {
+  pointer.x = (event.clientX / window.innerWidth) * 2 - 1
+  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1
+}
+
+window.addEventListener('pointermove', onPointerMove)
 
 /**
  * Textures
@@ -149,7 +171,7 @@ window.addEventListener('dblclick', () => {
  */
 let model
 
-loader.load(
+gltfLoader.load(
   gltfPath,
   function (gltf) {
     model = gltf.scene
@@ -179,6 +201,8 @@ for (let i = 0; i < pointLightsCount; i++) {
   scene.add(pointLight)
 }
 
+const spotLights = []
+
 const spotLightLeft = new THREE.SpotLight(0xffffff)
 spotLightLeft.position.set(-15, 25, 10)
 spotLightLeft.castShadow = true
@@ -187,6 +211,7 @@ spotLightLeft.shadow.mapSize.height = 1024
 spotLightLeft.shadow.camera.near = 1
 spotLightLeft.shadow.camera.far = 75
 spotLightLeft.shadow.camera.fov = 30
+spotLights.push(spotLightLeft)
 
 const spotLightRight = new THREE.SpotLight(0xffffff)
 spotLightRight.position.set(15, 25, 10)
@@ -195,14 +220,7 @@ spotLightRight.shadow.mapSize.width = 1024
 spotLightRight.shadow.mapSize.height = 1024
 spotLightRight.shadow.camera.near = 1
 spotLightRight.shadow.camera.far = 75
-
-const spotLightRightDown = new THREE.SpotLight(0xffffff, 0.5)
-spotLightRightDown.position.set(0, 50, 0)
-spotLightRightDown.castShadow = true
-spotLightRightDown.shadow.mapSize.width = 1024
-spotLightRightDown.shadow.mapSize.height = 1024
-spotLightRightDown.shadow.camera.near = 1
-spotLightRightDown.shadow.camera.far = 75
+spotLights.push(spotLightRight)
 
 const spotLightFront = new THREE.SpotLight(0xffffff)
 spotLightFront.position.set(0, 15, 25)
@@ -211,6 +229,7 @@ spotLightFront.shadow.mapSize.width = 1024
 spotLightFront.shadow.mapSize.height = 1024
 spotLightFront.shadow.camera.near = 1
 spotLightFront.shadow.camera.far = 75
+spotLights.push(spotLightFront)
 
 /**
  * Walls and Floor
@@ -291,11 +310,19 @@ showcase.add(cylinder)
 
 const capsuleGeometryLenght = 5
 const capsuleGeometry = new THREE.CapsuleGeometry(3, capsuleGeometryLenght, 32, 32)
+
 const capsuleMaterial = new THREE.MeshPhysicalMaterial({
-  metalness: 0,
-  roughness: 0,
-  transmission: 1
+  metalness: 1,
+  roughness: 0.1,
+  transparent: true,
+  opacity: 0.2
 })
+
+// const capsuleMaterial = new THREE.MeshPhysicalMaterial({
+//   metalness: 0,
+//   roughness: 0.3,
+//   transmission: 1
+// })
 
 const capsule = new THREE.Mesh(capsuleGeometry, capsuleMaterial)
 capsule.position.y = cylinderHeight + capsuleGeometryLenght / 2 + estimatedCapsuleCapSegmentHeight + boxHeight
@@ -333,8 +360,127 @@ lightFolder
 lightFolder.add(hemisphereLight, 'intensity', 0, 1, 0.001)
 
 /**
- *  Animation loop
+ * Control Panel
  */
+const controlPanelWidth = 12
+const controlPanelHeight = 8
+
+const controlPlaneGeometry = new THREE.BoxBufferGeometry(controlPanelWidth, controlPanelHeight, 1)
+const controlPanelMaterial = new THREE.MeshStandardMaterial({
+  color: 'grey'
+})
+
+const controlPanel = new THREE.Mesh(controlPlaneGeometry, controlPanelMaterial)
+controlPanel.position.x = 0
+controlPanel.position.y = 50
+controlPanel.position.z = 50
+controlPanel.rotation.x = -Math.atan(controlPanel.position.y / controlPanel.position.z)
+
+scene.add(controlPanel)
+
+const toggleSwitches = []
+
+const fontLoader = new FontLoader(loadingManager)
+fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
+  const textMaterial = new THREE.MeshNormalMaterial()
+
+  const settingsTextGeometry = new TextGeometry('Settings', {
+    font,
+    size: 1,
+    height: 1,
+    curveSegments: 12
+  })
+
+  settingsTextGeometry.computeBoundingBox()
+
+  const settingsText = new THREE.Mesh(settingsTextGeometry, textMaterial)
+
+  settingsText.position.x = -(settingsTextGeometry.boundingBox.max.x - settingsTextGeometry.boundingBox.min.x) / 2
+  settingsText.position.y = 2.5
+  settingsText.position.z = 0.1
+
+  text.add(settingsText)
+
+  const spotlightCount = 3
+  const padding = 0.5
+
+  for (let i = 0; i < spotlightCount; i++) {
+    const spotlightTextGeometry = new TextGeometry('Spotlight ' + i, {
+      font,
+      size: 0.5,
+      height: 1,
+      curveSegments: 12
+    })
+
+    spotlightTextGeometry.computeBoundingBox()
+
+    const spotlightText = new THREE.Mesh(spotlightTextGeometry, textMaterial)
+    spotlightText.position.x = -controlPanelWidth / 2 + padding
+    spotlightText.position.y = -(spotlightTextGeometry.boundingBox.max.y - settingsTextGeometry.boundingBox.min.y) / 2 - i
+    spotlightText.position.z = 0.1
+
+    const capsuleMaterial = new THREE.MeshNormalMaterial({
+      transparent: true,
+      opacity: 0.2
+    })
+
+    const capsuleWidth = 1
+    const capsuleGeometry = new THREE.CapsuleGeometry(0.3, capsuleWidth, 8, 8)
+
+    const capsule = new THREE.Mesh(capsuleGeometry, capsuleMaterial)
+    const estimatedCapsuleCapSegmentHeight = 0.1
+
+    capsule.position.x = controlPanelWidth / 2 - capsuleWidth - estimatedCapsuleCapSegmentHeight - padding
+    capsule.position.y = -(spotlightTextGeometry.boundingBox.max.y - settingsTextGeometry.boundingBox.min.y) / 2 - i
+    capsule.position.z = 0.5
+    capsule.rotation.z = -Math.PI / 2
+
+    const sphrereRadius = 0.2
+    const sphereGeometry = new THREE.SphereGeometry(sphrereRadius, 8, 8)
+    const sphere = new THREE.Mesh(sphereGeometry, textMaterial)
+
+    sphere.position.x = controlPanelWidth / 2 - capsuleWidth * 1.5 - estimatedCapsuleCapSegmentHeight - padding
+    sphere.position.y = -(spotlightTextGeometry.boundingBox.max.y - settingsTextGeometry.boundingBox.min.y) / 2 - i
+    sphere.position.z = 0.5
+
+    toggleSwitches.push({
+      capsule,
+      sphere,
+      active: false,
+      toggle: (index, active) => {
+        active = !active
+
+        active ? scene.add(spotLights[index]) : scene.remove(spotLights[index])
+
+        const newPositionX = active ? controlPanelWidth / 2 - capsuleWidth * 1.5 + estimatedCapsuleCapSegmentHeight + padding - sphrereRadius : +controlPanelWidth / 2 - capsuleWidth * 1.5 - estimatedCapsuleCapSegmentHeight - padding
+
+        gsap.to(sphere.position, {
+          x: newPositionX,
+          y: sphere.position.y,
+          z: sphere.position.z,
+          duration: 0.5,
+          ease: 'power1.inOut',
+          onStart: () => {
+
+          }
+        })
+      }
+    })
+
+    text.add(spotlightText, capsule, sphere)
+    text.position.set(controlPanel.position.x, controlPanel.position.y, controlPanel.position.z)
+    text.rotation.x = -Math.atan(controlPanel.position.y / controlPanel.position.z)
+  }
+
+  const textFolder = gui.addFolder('Text')
+  textFolder.add(text.rotation, 'x', 0, 10, 0.001)
+
+  // text.rotateOnAxis(new THREE.Vector3(controlPanel.position.x, controlPanel.position.y, controlPanel.position.z), -Math.atan(controlPanel.position.y / controlPanel.position.z))
+})
+
+/**
+   *  Animation loop
+   */
 const clock = new THREE.Clock()
 
 const tick = () => {
@@ -342,7 +488,6 @@ const tick = () => {
 
   // Render
   renderer.render(scene, camera)
-  renderer.shadowMap.enabled = true
 
   // Controls
   controls.update()
@@ -350,6 +495,76 @@ const tick = () => {
   // Model animation
   model.position.y = 0.25 * Math.sin(clock.getElapsedTime() * 2)
 
+  renderer.render(scene, camera)
+
   // Call tick again on the next frame
   window.requestAnimationFrame(tick)
 }
+
+let controlPanelFocused = false
+
+window.addEventListener('click', () => {
+  raycaster.setFromCamera(pointer, camera)
+  const intersects = raycaster.intersectObjects(scene.children)
+
+  // Control panel
+  let controlPanelClicked = false
+
+  intersects.forEach((intersect) => {
+    if (intersect.object === controlPanel) {
+      gsap.to(camera.position, {
+        x: 0,
+        y: controlPanel.position.y + 13,
+        z: controlPanel.position.z + 13,
+        duration: 2,
+        onComplete: () => {
+          gsap.to(controls.target, {
+            x: 0,
+            y: 0,
+            z: 0,
+            duration: 2,
+            ease: 'power1.inOut'
+          })
+        },
+        ease: 'power1.inOut'
+      })
+
+      controlPanelClicked = true
+      controlPanelFocused = true
+    }
+
+    if (!controlPanelClicked && controlPanelFocused) {
+      gsap.to(camera.position, {
+        x: 0,
+        y: initialCameraPositionY,
+        z: initialCameraPositionZ,
+        duration: 2,
+        onStart: () => {
+          gsap.to(controls.target, {
+            x: model.position.x,
+            y: model.position.y,
+            z: model.position.z,
+            duration: 2,
+            ease: 'power1.inOut'
+          })
+        },
+        ease: 'power1.inOut'
+      })
+
+      if (controlPanelFocused) {
+        const toggleSwitchIndex = toggleSwitches.map(toggleSwitch => toggleSwitch.capsule).indexOf(intersect.object)
+
+        if (toggleSwitchIndex > -1) {
+          // Hint: Could be improved by changing the active property in the toggle function
+          toggleSwitches[toggleSwitchIndex].toggle(toggleSwitchIndex, toggleSwitches[toggleSwitchIndex].active)
+          toggleSwitches[toggleSwitchIndex].active = !toggleSwitches[toggleSwitchIndex].active
+        }
+      }
+
+      controlPanelFocused = false
+    }
+
+    // Toggle switch
+    console.log('control', controlPanelFocused)
+  })
+}, false)
