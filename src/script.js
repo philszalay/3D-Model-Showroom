@@ -36,7 +36,7 @@ loadingManager.onLoad = () => {
       z: initialCameraPositionZ,
       duration: 2,
       onComplete: () => {
-        scene.add(hemisphereLight, spotLightLeft, spotLightRight, spotLightRightDown, spotLightFront)
+        scene.add(spotLightLeft, spotLightRight, spotLightRightDown, hemisphereLight)
       }
     })
   }, 500)
@@ -119,15 +119,6 @@ const standTextureNormal = textureLoader.load('./textures/TexturesCom_Marble_Til
 const standTextureRoughness = textureLoader.load('./textures/TexturesCom_Marble_TilesSquare_512_roughness.png')
 const floorTextureNormal = textureLoader.load('./textures/sl2qedtp_8K_Normal.jpg')
 
-// floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping
-// floorTexture.repeat.set(10, 10)
-
-// floorTextureNormal.wrapS = floorTextureNormal.wrapT = THREE.RepeatWrapping
-// floorTextureNormal.repeat.set(10, 10)
-
-// floorTextureRoughness.wrapS = floorTextureRoughness.wrapT = THREE.RepeatWrapping
-// floorTextureRoughness.repeat.set(10, 10)
-
 /**
  * Animate
  */
@@ -189,22 +180,37 @@ for (let i = 0; i < pointLightsCount; i++) {
 }
 
 const spotLightLeft = new THREE.SpotLight(0xffffff)
-spotLightLeft.position.set(-25, 5, -10)
+spotLightLeft.position.set(-15, 25, 10)
 spotLightLeft.castShadow = true
 spotLightLeft.shadow.mapSize.width = 1024
 spotLightLeft.shadow.mapSize.height = 1024
+spotLightLeft.shadow.camera.near = 1
+spotLightLeft.shadow.camera.far = 75
+spotLightLeft.shadow.camera.fov = 30
 
 const spotLightRight = new THREE.SpotLight(0xffffff)
-spotLightRight.position.set(25, 5, -10)
+spotLightRight.position.set(15, 25, 10)
 spotLightRight.castShadow = true
 spotLightRight.shadow.mapSize.width = 1024
 spotLightRight.shadow.mapSize.height = 1024
+spotLightRight.shadow.camera.near = 1
+spotLightRight.shadow.camera.far = 75
 
 const spotLightRightDown = new THREE.SpotLight(0xffffff, 0.5)
-spotLightRightDown.position.set(0, 100, 0)
+spotLightRightDown.position.set(0, 50, 0)
+spotLightRightDown.castShadow = true
+spotLightRightDown.shadow.mapSize.width = 1024
+spotLightRightDown.shadow.mapSize.height = 1024
+spotLightRightDown.shadow.camera.near = 1
+spotLightRightDown.shadow.camera.far = 75
 
 const spotLightFront = new THREE.SpotLight(0xffffff)
-spotLightFront.position.set(0, 25, -50)
+spotLightFront.position.set(0, 15, 25)
+spotLightFront.castShadow = true
+spotLightFront.shadow.mapSize.width = 1024
+spotLightFront.shadow.mapSize.height = 1024
+spotLightFront.shadow.camera.near = 1
+spotLightFront.shadow.camera.far = 75
 
 /**
  * Walls and Floor
@@ -222,6 +228,7 @@ const floorMaterial = new THREE.MeshStandardMaterial({
 
 const floor = new THREE.Mesh(roomGeometry, floorMaterial)
 floor.rotation.x = -Math.PI / 2
+floor.receiveShadow = true
 room.add(floor)
 
 const roomMaterial = new THREE.MeshStandardMaterial({
@@ -271,6 +278,7 @@ const boxHeight = 0.3
 const boxGeometry = new THREE.BoxBufferGeometry(5, boxHeight, 5)
 const box = new THREE.Mesh(boxGeometry, standMaterial)
 box.translateY(boxHeight / 2)
+box.castShadow = true
 showcase.add(box)
 
 const cylinderHeight = 7
@@ -278,6 +286,7 @@ const cylinderGeometry = new THREE.CylinderBufferGeometry(2, 1, cylinderHeight, 
 const cylinder = new THREE.Mesh(cylinderGeometry, standMaterial)
 cylinder.translateY(cylinderHeight / 2)
 cylinder.position.y = boxHeight + cylinderHeight / 2
+cylinder.castShadow = true
 showcase.add(cylinder)
 
 const capsuleGeometryLenght = 5
@@ -290,6 +299,7 @@ const capsuleMaterial = new THREE.MeshPhysicalMaterial({
 
 const capsule = new THREE.Mesh(capsuleGeometry, capsuleMaterial)
 capsule.position.y = cylinderHeight + capsuleGeometryLenght / 2 + estimatedCapsuleCapSegmentHeight + boxHeight
+capsule.castShadow = true
 showcase.add(capsule)
 
 /**
@@ -332,6 +342,7 @@ const tick = () => {
 
   // Render
   renderer.render(scene, camera)
+  renderer.shadowMap.enabled = true
 
   // Controls
   controls.update()
