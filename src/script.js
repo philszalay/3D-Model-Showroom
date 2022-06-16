@@ -100,6 +100,12 @@ controls.enablePan = false
 controls.enableDamping = true
 controls.dampingFactor = 0.05
 
+const wallAndFloorDimension = 250
+
+controls.maxPolarAngle = Math.PI / 1.9
+controls.maxDistance = wallAndFloorDimension / 2
+controls.minDistance = 1
+
 /**
  * Loading Manager
  */
@@ -239,9 +245,7 @@ spotLights.push(spotLightFront)
 /**
  * Walls and Floor
  */
-const planeDimension = 250
-
-const roomGeometry = new THREE.PlaneBufferGeometry(planeDimension, planeDimension)
+const roomGeometry = new THREE.PlaneBufferGeometry(wallAndFloorDimension, wallAndFloorDimension)
 
 const floorMaterial = new THREE.MeshStandardMaterial({
   color: '#ffffff',
@@ -262,30 +266,30 @@ const roomMaterial = new THREE.MeshStandardMaterial({
 })
 
 const wallBehind = new THREE.Mesh(roomGeometry, roomMaterial)
-wallBehind.position.y = planeDimension / 2
-wallBehind.position.z = -planeDimension / 2
+wallBehind.position.y = wallAndFloorDimension / 2
+wallBehind.position.z = -wallAndFloorDimension / 2
 room.add(wallBehind)
 
 const wallFront = new THREE.Mesh(roomGeometry, roomMaterial)
-wallFront.position.y = planeDimension / 2
-wallFront.position.z = planeDimension / 2
+wallFront.position.y = wallAndFloorDimension / 2
+wallFront.position.z = wallAndFloorDimension / 2
 wallFront.rotation.x = Math.PI
 room.add(wallFront)
 
 const wallLeft = new THREE.Mesh(roomGeometry, roomMaterial)
-wallLeft.position.x = -planeDimension / 2
-wallLeft.position.y = planeDimension / 2
+wallLeft.position.x = -wallAndFloorDimension / 2
+wallLeft.position.y = wallAndFloorDimension / 2
 wallLeft.rotation.y = Math.PI / 2
 room.add(wallLeft)
 
 const wallRight = new THREE.Mesh(roomGeometry, roomMaterial)
-wallRight.position.x = planeDimension / 2
-wallRight.position.y = planeDimension / 2
+wallRight.position.x = wallAndFloorDimension / 2
+wallRight.position.y = wallAndFloorDimension / 2
 wallRight.rotation.y = -Math.PI / 2
 room.add(wallRight)
 
 const wallTop = new THREE.Mesh(roomGeometry, roomMaterial)
-wallTop.position.y = planeDimension
+wallTop.position.y = wallAndFloorDimension
 wallTop.rotation.x = Math.PI / 2
 room.add(wallTop)
 
@@ -316,24 +320,25 @@ showcase.add(cylinder)
 const capsuleGeometryLenght = 5
 const capsuleGeometry = new THREE.CapsuleGeometry(3, capsuleGeometryLenght, 32, 32)
 
-const capsuleMaterial = new THREE.MeshPhysicalMaterial({
+const lowQualityCapsuleMaterial = new THREE.MeshPhysicalMaterial({
   metalness: 1,
   roughness: 0.1,
   transparent: true,
-  opacity: 0.2
+  opacity: 0.2,
+  side: THREE.DoubleSide
 })
 
-// TODO: High performance mode
-// const capsuleMaterial = new THREE.MeshPhysicalMaterial({
-//   metalness: 0,
-//   roughness: 0.3,
-//   transmission: 1
-// })
+const highQualityCapsuleMaterial = new THREE.MeshPhysicalMaterial({
+  roughness: 0,
+  transmission: 1,
+  thickness: 0.7,
+  side: THREE.DoubleSide
+})
 
-const capsule = new THREE.Mesh(capsuleGeometry, capsuleMaterial)
-capsule.position.y = cylinderHeight + capsuleGeometryLenght / 2 + estimatedCapsuleCapSegmentHeight + boxHeight
-capsule.castShadow = true
-showcase.add(capsule)
+const modelCapsule = new THREE.Mesh(capsuleGeometry, highQualityCapsuleMaterial)
+modelCapsule.position.y = cylinderHeight + capsuleGeometryLenght / 2 + estimatedCapsuleCapSegmentHeight + boxHeight
+modelCapsule.castShadow = true
+showcase.add(modelCapsule)
 
 /**
  * Debug
@@ -351,10 +356,9 @@ roomFolder.add(floorMaterial, 'metalness', 0, 1, 0.001)
 roomFolder.add(floorMaterial, 'roughness', 0, 1, 0.001)
 
 const showcaseFolder = gui.addFolder('Showcase')
-showcaseFolder.add(capsuleMaterial, 'roughness', 0, 1, 0.001)
-showcaseFolder.add(capsuleMaterial, 'metalness', 0, 1, 0.001)
-showcaseFolder.add(capsuleMaterial, 'thickness', 0, 1, 0.001)
-showcaseFolder.add(standMaterial, 'metalness', 0, 1, 0.001)
+showcaseFolder.add(highQualityCapsuleMaterial, 'roughness', 0, 1, 0.001)
+showcaseFolder.add(highQualityCapsuleMaterial, 'metalness', 0, 1, 0.001)
+showcaseFolder.add(highQualityCapsuleMaterial, 'thickness', 0, 1, 0.001)
 
 const lightFolder = gui.addFolder('Lights')
 lightFolder
@@ -427,10 +431,10 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
 
   controlPanelText.add(settingsText)
 
-  const spotlightCount = 3
+  const rowCount = 4
 
-  for (let i = 0; i < spotlightCount; i++) {
-    const spotlightTextGeometry = new TextGeometry('Spotlight ' + (spotlightCount - i), {
+  for (let i = 0; i < rowCount; i++) {
+    const spotlightTextGeometry = new TextGeometry(i === rowCount - 1 ? 'Low Quality' : 'Spotlight ' + (rowCount - i), {
       font,
       size: 0.5,
       height: 0.1,
@@ -468,24 +472,36 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
     sphere.position.y = spotlightText.position.y + capsuleRadius / 2
     sphere.position.z = 0.5
 
+    const toggle = function () {
+      this.active = !this.active
+
+      if (this.index === rowCount - 1) {
+        if (this.active) {
+          console.log('new material')
+          modelCapsule.material = lowQualityCapsuleMaterial
+        } else {
+          modelCapsule.material = highQualityCapsuleMaterial
+        }
+      } else {
+        this.active ? scene.add(spotLights[this.index]) : scene.remove(spotLights[this.index])
+      }
+
+      const newPositionX = this.active ? capsuleWidth - sphrereGeometryRadius / 2 : sphrereGeometryRadius / 2
+      gsap.to(sphere.position, {
+        x: newPositionX,
+        y: sphere.position.y,
+        z: sphere.position.z,
+        duration: 0.5,
+        ease: 'power1.inOut'
+      })
+    }
+
     toggleSwitches.push({
       capsule,
       sphere,
+      index: i,
       active: false,
-      toggle: (index, active) => {
-        active = !active
-
-        active ? scene.add(spotLights[index]) : scene.remove(spotLights[index])
-
-        const newPositionX = active ? capsuleWidth - sphrereGeometryRadius / 2 : sphrereGeometryRadius / 2
-        gsap.to(sphere.position, {
-          x: newPositionX,
-          y: sphere.position.y,
-          z: sphere.position.z,
-          duration: 0.5,
-          ease: 'power1.inOut'
-        })
-      }
+      toggle
     })
 
     controlPanelText.add(spotlightText, capsule, sphere)
@@ -544,7 +560,7 @@ window.addEventListener('click', () => {
 
   // Control panel
   intersects.forEach((intersect) => {
-    if (intersect.object === capsule) {
+    if (intersect.object === modelCapsule) {
       gsap.to(camera.position, {
         x: controlPanel.position.x + 10,
         y: controlPanel.position.y + 25,
@@ -607,8 +623,7 @@ window.addEventListener('click', () => {
 
       if (toggleSwitchIndex > -1) {
         // Hint: Could be improved by changing the active property in the toggle function
-        toggleSwitches[toggleSwitchIndex].toggle(toggleSwitchIndex, toggleSwitches[toggleSwitchIndex].active)
-        toggleSwitches[toggleSwitchIndex].active = !toggleSwitches[toggleSwitchIndex].active
+        toggleSwitches[toggleSwitchIndex].toggle()
       }
     }
   })
