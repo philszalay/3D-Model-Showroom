@@ -5,50 +5,10 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader'
 import Stats from 'three/examples/jsm/libs/stats.module'
-import { TextBufferGeometry, TextGeometry } from 'three/examples/jsm/geometries/TextGeometry'
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry'
 import * as dat from 'dat.gui'
-import { GeometryUtils, TangentSpaceNormalMap, Vector3 } from 'three'
 
 const gltfPath = './gltfs/01.gltf'
-
-/**
- * Loading Manager
- */
-const loadingManager = new THREE.LoadingManager()
-const loadingAnimationContainer = document.querySelector('.loading-animation-container')
-const progressBar = document.getElementById('progress-bar')
-
-loadingManager.onStart = () => {
-  console.log('Loading started')
-}
-
-loadingManager.onProgress = (url, loaded, total) => {
-  progressBar.value = (loaded / total) * 100
-}
-
-loadingManager.onLoad = () => {
-  setTimeout(() => {
-    loadingAnimationContainer.style.display = 'none'
-
-    window.requestAnimationFrame(tick)
-
-    // Intro animation
-    gsap.fromTo(camera.position, { x: -25, y: 25, z: 25 }, {
-      x: camera.position.x,
-      y: initialCameraPositionY,
-      z: initialCameraPositionZ,
-      duration: 2,
-      onComplete: () => {
-        // scene.add(spotLightLeft, spotLightRight, spotLightRightDown, hemisphereLight)
-      },
-      ease: 'power1.inOut'
-    })
-  }, 500)
-}
-
-loadingManager.onError = (e) => {
-  console.log('Error', e)
-}
 
 /**
  * Colors
@@ -86,11 +46,8 @@ const showcase = new THREE.Group()
 showcase.position.y = positionY
 scene.add(showcase)
 
-const text = new THREE.Group()
-scene.add(text)
-
-// glTF
-const gltfLoader = new GLTFLoader(loadingManager)
+const controlPanelText = new THREE.Group()
+scene.add(controlPanelText)
 
 // Stats
 const stats = Stats()
@@ -133,6 +90,52 @@ function onPointerMove (event) {
 window.addEventListener('pointermove', onPointerMove)
 
 /**
+ * Animate
+ */
+const controls = new OrbitControls(camera, canvas)
+controls.enableDamping = true
+controls.dampingFactor = 0.05
+
+/**
+ * Loading Manager
+ */
+const loadingManager = new THREE.LoadingManager()
+const loadingAnimationContainer = document.querySelector('.loading-animation-container')
+const progressBar = document.getElementById('progress-bar')
+
+loadingManager.onStart = () => {
+  console.log('Loading start')
+}
+
+loadingManager.onProgress = (url, loaded, total) => {
+  progressBar.value = (loaded / total) * 100
+}
+
+loadingManager.onLoad = () => {
+  setTimeout(() => {
+    loadingAnimationContainer.style.display = 'none'
+
+    window.requestAnimationFrame(tick)
+
+    // Intro animation
+    gsap.fromTo(camera.position, { x: -25, y: 25, z: 25 }, {
+      x: camera.position.x,
+      y: initialCameraPositionY,
+      z: initialCameraPositionZ,
+      duration: 2,
+      onComplete: () => {
+        // scene.add(spotLightLeft, spotLightRight, spotLightRightDown, hemisphereLight)
+      },
+      ease: 'power1.inOut'
+    })
+  }, 500)
+}
+
+loadingManager.onError = (e) => {
+  console.log('Error', e)
+}
+
+/**
  * Textures
  */
 const textureLoader = new THREE.TextureLoader(loadingManager)
@@ -142,11 +145,9 @@ const standTextureRoughness = textureLoader.load('./textures/TexturesCom_Marble_
 const floorTextureNormal = textureLoader.load('./textures/sl2qedtp_8K_Normal.jpg')
 
 /**
- * Animate
+ * glTF Loader
  */
-const controls = new OrbitControls(camera, canvas)
-controls.enableDamping = true
-controls.dampingFactor = 0.05
+const gltfLoader = new GLTFLoader(loadingManager)
 
 /**
  * Listeners
@@ -318,6 +319,7 @@ const capsuleMaterial = new THREE.MeshPhysicalMaterial({
   opacity: 0.2
 })
 
+// TODO: High performance mode
 // const capsuleMaterial = new THREE.MeshPhysicalMaterial({
 //   metalness: 0,
 //   roughness: 0.3,
@@ -371,10 +373,11 @@ const controlPanelMaterial = new THREE.MeshStandardMaterial({
 })
 
 const controlPanel = new THREE.Mesh(controlPlaneGeometry, controlPanelMaterial)
-controlPanel.position.x = 0
-controlPanel.position.y = 50
+controlPanel.position.x = 50
+controlPanel.position.y = 30
 controlPanel.position.z = 50
-controlPanel.rotation.x = -Math.atan(controlPanel.position.y / controlPanel.position.z)
+controlPanel.rotation.y = Math.atan(controlPanel.position.z / controlPanel.position.x)
+controlPanel.rotateOnWorldAxis(new THREE.Vector3(1, 0, -1).normalize(), -Math.atan(controlPanel.position.y / controlPanel.position.z))
 
 scene.add(controlPanel)
 
@@ -399,7 +402,7 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
   settingsText.position.y = 2.5
   settingsText.position.z = 0.1
 
-  text.add(settingsText)
+  controlPanelText.add(settingsText)
 
   const spotlightCount = 3
   const padding = 0.5
@@ -459,23 +462,22 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
           y: sphere.position.y,
           z: sphere.position.z,
           duration: 0.5,
-          ease: 'power1.inOut',
-          onStart: () => {
-
-          }
+          ease: 'power1.inOut'
         })
       }
     })
 
-    text.add(spotlightText, capsule, sphere)
-    text.position.set(controlPanel.position.x, controlPanel.position.y, controlPanel.position.z)
-    text.rotation.x = -Math.atan(controlPanel.position.y / controlPanel.position.z)
+    controlPanelText.add(spotlightText, capsule, sphere)
+    controlPanelText.position.set(controlPanel.position.x, controlPanel.position.y, controlPanel.position.z)
   }
 
-  const textFolder = gui.addFolder('Text')
-  textFolder.add(text.rotation, 'x', 0, 10, 0.001)
+  controlPanelText.rotation.y = Math.atan(controlPanelText.position.z / controlPanelText.position.x)
+  controlPanelText.rotateOnWorldAxis(new THREE.Vector3(1, 0, -1).normalize(), -Math.atan(controlPanelText.position.y / controlPanelText.position.z))
 
-  // text.rotateOnAxis(new THREE.Vector3(controlPanel.position.x, controlPanel.position.y, controlPanel.position.z), -Math.atan(controlPanel.position.y / controlPanel.position.z))
+  const textFolder = gui.addFolder('Text')
+  textFolder.add(controlPanelText.rotation, 'x', 0, 10, 0.001)
+  textFolder.add(controlPanelText.rotation, 'z', 0, 10, 0.001)
+  textFolder.add(controlPanelText.rotation, 'y', 0, 10, 0.001)
 })
 
 /**
@@ -495,8 +497,6 @@ const tick = () => {
   // Model animation
   model.position.y = 0.25 * Math.sin(clock.getElapsedTime() * 2)
 
-  renderer.render(scene, camera)
-
   // Call tick again on the next frame
   window.requestAnimationFrame(tick)
 }
@@ -508,15 +508,16 @@ window.addEventListener('click', () => {
   const intersects = raycaster.intersectObjects(scene.children)
 
   // Control panel
-  let controlPanelClicked = false
-
   intersects.forEach((intersect) => {
     if (intersect.object === controlPanel) {
       gsap.to(camera.position, {
-        x: 0,
-        y: controlPanel.position.y + 13,
-        z: controlPanel.position.z + 13,
-        duration: 2,
+        x: controlPanel.position.x + 10,
+        y: controlPanel.position.y + 25,
+        z: controlPanel.position.z + 10,
+        duration: 1,
+        onStart: () => {
+          controls.enableRotate = false
+        },
         onComplete: () => {
           gsap.to(controls.target, {
             x: 0,
@@ -529,42 +530,38 @@ window.addEventListener('click', () => {
         ease: 'power1.inOut'
       })
 
-      controlPanelClicked = true
       controlPanelFocused = true
     }
+    // } else if (intersect.object === backButton) {
+    //   gsap.to(camera.position, {
+    //     x: 0,
+    //     y: initialCameraPositionY,
+    //     z: initialCameraPositionZ,
+    //     duration: 2,
+    //     onStart: () => {
+    //       gsap.to(controls.target, {
+    //         x: model.position.x,
+    //         y: model.position.y,
+    //         z: model.position.z,
+    //         duration: 1,
+    //         ease: 'power1.inOut'
+    //       })
+    //     },
+    //     ease: 'power1.inOut'
+    //   })
 
-    if (!controlPanelClicked && controlPanelFocused) {
-      gsap.to(camera.position, {
-        x: 0,
-        y: initialCameraPositionY,
-        z: initialCameraPositionZ,
-        duration: 2,
-        onStart: () => {
-          gsap.to(controls.target, {
-            x: model.position.x,
-            y: model.position.y,
-            z: model.position.z,
-            duration: 2,
-            ease: 'power1.inOut'
-          })
-        },
-        ease: 'power1.inOut'
-      })
+    //   controlPanelFocused = false
+    // }
 
-      if (controlPanelFocused) {
-        const toggleSwitchIndex = toggleSwitches.map(toggleSwitch => toggleSwitch.capsule).indexOf(intersect.object)
+    // Toggle switches
+    if (controlPanelFocused) {
+      const toggleSwitchIndex = toggleSwitches.map(toggleSwitch => toggleSwitch.capsule).indexOf(intersect.object)
 
-        if (toggleSwitchIndex > -1) {
-          // Hint: Could be improved by changing the active property in the toggle function
-          toggleSwitches[toggleSwitchIndex].toggle(toggleSwitchIndex, toggleSwitches[toggleSwitchIndex].active)
-          toggleSwitches[toggleSwitchIndex].active = !toggleSwitches[toggleSwitchIndex].active
-        }
+      if (toggleSwitchIndex > -1) {
+        // Hint: Could be improved by changing the active property in the toggle function
+        toggleSwitches[toggleSwitchIndex].toggle(toggleSwitchIndex, toggleSwitches[toggleSwitchIndex].active)
+        toggleSwitches[toggleSwitchIndex].active = !toggleSwitches[toggleSwitchIndex].active
       }
-
-      controlPanelFocused = false
     }
-
-    // Toggle switch
-    console.log('control', controlPanelFocused)
   })
 }, false)
