@@ -49,6 +49,9 @@ scene.add(showcase)
 const controlPanelText = new THREE.Group()
 scene.add(controlPanelText)
 
+const backButton = new THREE.Group()
+scene.add(backButton)
+
 // Stats
 const stats = Stats()
 stats.domElement.style.position = 'absolute'
@@ -93,6 +96,7 @@ window.addEventListener('pointermove', onPointerMove)
  * Animate
  */
 const controls = new OrbitControls(camera, canvas)
+controls.enablePan = false
 controls.enableDamping = true
 controls.dampingFactor = 0.05
 
@@ -364,7 +368,7 @@ lightFolder.add(hemisphereLight, 'intensity', 0, 1, 0.001)
 /**
  * Control Panel
  */
-const controlPanelWidth = 12
+const controlPanelWidth = 24
 const controlPanelHeight = 8
 
 const controlPlaneGeometry = new THREE.BoxBufferGeometry(controlPanelWidth, controlPanelHeight, 1)
@@ -381,16 +385,35 @@ controlPanel.rotateOnWorldAxis(new THREE.Vector3(1, 0, -1).normalize(), -Math.at
 
 scene.add(controlPanel)
 
+/**
+ * Back Button Background
+ */
+const backButtonGeometryWidth = 4
+const backButtonGeometryHeight = 2
+
+const backButtonGeometry = new THREE.BoxBufferGeometry(backButtonGeometryWidth, backButtonGeometryHeight, 0.1)
+
+const backButtonMaterial = new THREE.MeshMatcapMaterial({
+  color: 0xff0000
+})
+
+const padding = 0.5
+
+const backButtonBackground = new THREE.Mesh(backButtonGeometry, backButtonMaterial)
+backButtonBackground.position.x = controlPanelWidth / 2 - backButtonGeometryWidth / 2 - padding
+backButtonBackground.position.y = -controlPanelHeight / 2 + backButtonGeometryHeight / 2 + padding
+backButtonBackground.position.z = 0.5
+
 const toggleSwitches = []
 
 const fontLoader = new FontLoader(loadingManager)
 fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
   const textMaterial = new THREE.MeshNormalMaterial()
 
-  const settingsTextGeometry = new TextGeometry('Settings', {
+  const settingsTextGeometry = new TextGeometry('Control Panel', {
     font,
     size: 1,
-    height: 1,
+    height: 0.1,
     curveSegments: 12
   })
 
@@ -400,18 +423,17 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
 
   settingsText.position.x = -(settingsTextGeometry.boundingBox.max.x - settingsTextGeometry.boundingBox.min.x) / 2
   settingsText.position.y = 2.5
-  settingsText.position.z = 0.1
+  settingsText.position.z = 0.5
 
   controlPanelText.add(settingsText)
 
   const spotlightCount = 3
-  const padding = 0.5
 
   for (let i = 0; i < spotlightCount; i++) {
-    const spotlightTextGeometry = new TextGeometry('Spotlight ' + i, {
+    const spotlightTextGeometry = new TextGeometry('Spotlight ' + (spotlightCount - i), {
       font,
       size: 0.5,
-      height: 1,
+      height: 0.1,
       curveSegments: 12
     })
 
@@ -419,8 +441,8 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
 
     const spotlightText = new THREE.Mesh(spotlightTextGeometry, textMaterial)
     spotlightText.position.x = -controlPanelWidth / 2 + padding
-    spotlightText.position.y = -(spotlightTextGeometry.boundingBox.max.y - settingsTextGeometry.boundingBox.min.y) / 2 - i
-    spotlightText.position.z = 0.1
+    spotlightText.position.y = -controlPanelHeight / 2 + (spotlightTextGeometry.boundingBox.max.y - settingsTextGeometry.boundingBox.min.y) / 2 + i + padding
+    spotlightText.position.z = 0.5
 
     const capsuleMaterial = new THREE.MeshNormalMaterial({
       transparent: true,
@@ -428,22 +450,22 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
     })
 
     const capsuleWidth = 1
-    const capsuleGeometry = new THREE.CapsuleGeometry(0.3, capsuleWidth, 8, 8)
+    const capsuleRadius = 0.3
+    const capsuleGeometry = new THREE.CapsuleGeometry(capsuleRadius, capsuleWidth, 8, 8)
 
     const capsule = new THREE.Mesh(capsuleGeometry, capsuleMaterial)
-    const estimatedCapsuleCapSegmentHeight = 0.1
 
-    capsule.position.x = controlPanelWidth / 2 - capsuleWidth - estimatedCapsuleCapSegmentHeight - padding
-    capsule.position.y = -(spotlightTextGeometry.boundingBox.max.y - settingsTextGeometry.boundingBox.min.y) / 2 - i
+    capsule.position.x = capsuleWidth / 2
+    capsule.position.y = spotlightText.position.y + capsuleRadius / 2
     capsule.position.z = 0.5
     capsule.rotation.z = -Math.PI / 2
 
-    const sphrereRadius = 0.2
-    const sphereGeometry = new THREE.SphereGeometry(sphrereRadius, 8, 8)
+    const sphrereGeometryRadius = 0.2
+    const sphereGeometry = new THREE.SphereGeometry(sphrereGeometryRadius, 8, 8)
     const sphere = new THREE.Mesh(sphereGeometry, textMaterial)
 
-    sphere.position.x = controlPanelWidth / 2 - capsuleWidth * 1.5 - estimatedCapsuleCapSegmentHeight - padding
-    sphere.position.y = -(spotlightTextGeometry.boundingBox.max.y - settingsTextGeometry.boundingBox.min.y) / 2 - i
+    sphere.position.x = sphrereGeometryRadius / 2
+    sphere.position.y = spotlightText.position.y + capsuleRadius / 2
     sphere.position.z = 0.5
 
     toggleSwitches.push({
@@ -455,8 +477,7 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
 
         active ? scene.add(spotLights[index]) : scene.remove(spotLights[index])
 
-        const newPositionX = active ? controlPanelWidth / 2 - capsuleWidth * 1.5 + estimatedCapsuleCapSegmentHeight + padding - sphrereRadius : +controlPanelWidth / 2 - capsuleWidth * 1.5 - estimatedCapsuleCapSegmentHeight - padding
-
+        const newPositionX = active ? capsuleWidth - sphrereGeometryRadius / 2 : sphrereGeometryRadius / 2
         gsap.to(sphere.position, {
           x: newPositionX,
           y: sphere.position.y,
@@ -468,16 +489,30 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
     })
 
     controlPanelText.add(spotlightText, capsule, sphere)
-    controlPanelText.position.set(controlPanel.position.x, controlPanel.position.y, controlPanel.position.z)
   }
 
+  controlPanelText.position.set(controlPanel.position.x, controlPanel.position.y, controlPanel.position.z)
   controlPanelText.rotation.y = Math.atan(controlPanelText.position.z / controlPanelText.position.x)
   controlPanelText.rotateOnWorldAxis(new THREE.Vector3(1, 0, -1).normalize(), -Math.atan(controlPanelText.position.y / controlPanelText.position.z))
 
-  const textFolder = gui.addFolder('Text')
-  textFolder.add(controlPanelText.rotation, 'x', 0, 10, 0.001)
-  textFolder.add(controlPanelText.rotation, 'z', 0, 10, 0.001)
-  textFolder.add(controlPanelText.rotation, 'y', 0, 10, 0.001)
+  const backButtonTextGeometry = new TextGeometry('Back', {
+    font,
+    size: 0.5,
+    height: 0.1,
+    curveSegments: 12
+  })
+
+  backButtonTextGeometry.computeBoundingBox()
+
+  const backButtonText = new THREE.Mesh(backButtonTextGeometry, textMaterial)
+  backButtonText.position.x = controlPanelWidth / 2 - backButtonGeometryWidth / 2 - (backButtonTextGeometry.boundingBox.max.x - backButtonTextGeometry.boundingBox.min.x) / 2 - padding
+  backButtonText.position.y = -controlPanelHeight / 2 + backButtonGeometryHeight / 2 - (backButtonTextGeometry.boundingBox.max.y - backButtonTextGeometry.boundingBox.min.y) / 2 + padding
+  backButtonText.position.z = 0.5
+
+  backButton.add(backButtonBackground, backButtonText)
+  backButton.position.set(controlPanel.position.x, controlPanel.position.y, controlPanel.position.z)
+  backButton.rotation.y = Math.atan(controlPanelText.position.z / controlPanelText.position.x)
+  backButton.rotateOnWorldAxis(new THREE.Vector3(1, 0, -1).normalize(), -Math.atan(controlPanelText.position.y / controlPanelText.position.z))
 })
 
 /**
@@ -509,7 +544,7 @@ window.addEventListener('click', () => {
 
   // Control panel
   intersects.forEach((intersect) => {
-    if (intersect.object === controlPanel) {
+    if (intersect.object === capsule) {
       gsap.to(camera.position, {
         x: controlPanel.position.x + 10,
         y: controlPanel.position.y + 25,
@@ -517,6 +552,7 @@ window.addEventListener('click', () => {
         duration: 1,
         onStart: () => {
           controls.enableRotate = false
+          controls.enableZoom = false
         },
         onComplete: () => {
           gsap.to(controls.target, {
@@ -531,27 +567,39 @@ window.addEventListener('click', () => {
       })
 
       controlPanelFocused = true
-    }
-    // } else if (intersect.object === backButton) {
-    //   gsap.to(camera.position, {
-    //     x: 0,
-    //     y: initialCameraPositionY,
-    //     z: initialCameraPositionZ,
-    //     duration: 2,
-    //     onStart: () => {
-    //       gsap.to(controls.target, {
-    //         x: model.position.x,
-    //         y: model.position.y,
-    //         z: model.position.z,
-    //         duration: 1,
-    //         ease: 'power1.inOut'
-    //       })
-    //     },
-    //     ease: 'power1.inOut'
-    //   })
+    } else if (intersect.object === backButtonBackground) {
+      gsap.to(camera.position, {
+        x: 0,
+        y: initialCameraPositionY,
+        z: initialCameraPositionZ + 50,
+        duration: 1,
+        onStart: () => {
+          gsap.to(controls.target, {
+            x: model.position.x,
+            y: model.position.y,
+            z: model.position.z,
+            duration: 1,
+            ease: 'power1.inOut'
+          })
+        },
+        onComplete: () => {
+          gsap.to(camera.position, {
+            x: 0,
+            y: initialCameraPositionY,
+            z: initialCameraPositionZ,
+            duration: 2,
+            ease: 'power1.inOut',
+            onComplete: () => {
+              controls.enableRotate = true
+              controls.enableZoom = true
+            }
+          })
+        },
+        ease: 'power1.inOut'
+      })
 
-    //   controlPanelFocused = false
-    // }
+      controlPanelFocused = false
+    }
 
     // Toggle switches
     if (controlPanelFocused) {
