@@ -133,9 +133,6 @@ loadingManager.onLoad = () => {
       y: initialCameraPositionY,
       z: initialCameraPositionZ,
       duration: 2,
-      onComplete: () => {
-        // scene.add(spotLightLeft, spotLightRight, spotLightRightDown, hemisphereLight)
-      },
       ease: 'power1.inOut'
     })
   }, 500)
@@ -196,8 +193,6 @@ gltfLoader.load(
 /**
  * Light
  */
-const hemisphereLight = new THREE.HemisphereLight(colors.hemisphereLight, 'white', 0.25)
-
 const pointLightsCount = 2
 
 for (let i = 0; i < pointLightsCount; i++) {
@@ -213,6 +208,10 @@ for (let i = 0; i < pointLightsCount; i++) {
 }
 
 const spotLights = []
+
+const spotLightAmbient = new THREE.SpotLight(0xffffff)
+spotLightAmbient.position.set(6, -149, -49)
+scene.add(spotLightAmbient)
 
 const spotLightLeft = new THREE.SpotLight(0xffffff)
 spotLightLeft.position.set(-15, 25, 10)
@@ -259,10 +258,10 @@ floor.rotation.x = -Math.PI / 2
 floor.receiveShadow = true
 room.add(floor)
 
-const roomMaterial = new THREE.MeshStandardMaterial({
-  color: '#9d4c4c',
-  metalness: 0.578,
-  roughness: 0.754
+const roomMaterial = new THREE.MeshPhysicalMaterial({
+  color: '#2121ff',
+  metalness: 1,
+  roughness: 0.644
 })
 
 const wallBehind = new THREE.Mesh(roomGeometry, roomMaterial)
@@ -318,7 +317,7 @@ cylinder.castShadow = true
 showcase.add(cylinder)
 
 const capsuleGeometryLenght = 5
-const capsuleGeometry = new THREE.CapsuleGeometry(3, capsuleGeometryLenght, 32, 32)
+const capsuleGeometry = new THREE.CapsuleGeometry(3, capsuleGeometryLenght, 64, 64)
 
 const lowQualityCapsuleMaterial = new THREE.MeshPhysicalMaterial({
   metalness: 1,
@@ -352,8 +351,8 @@ roomFolder
     roomMaterial.color.setHex(colors.room)
   })
 
-roomFolder.add(floorMaterial, 'metalness', 0, 1, 0.001)
-roomFolder.add(floorMaterial, 'roughness', 0, 1, 0.001)
+roomFolder.add(roomMaterial, 'metalness', 0, 1, 0.001)
+roomFolder.add(roomMaterial, 'roughness', 0, 1, 0.001)
 
 const showcaseFolder = gui.addFolder('Showcase')
 showcaseFolder.add(highQualityCapsuleMaterial, 'roughness', 0, 1, 0.001)
@@ -361,13 +360,18 @@ showcaseFolder.add(highQualityCapsuleMaterial, 'metalness', 0, 1, 0.001)
 showcaseFolder.add(highQualityCapsuleMaterial, 'thickness', 0, 1, 0.001)
 
 const lightFolder = gui.addFolder('Lights')
-lightFolder
-  .addColor(colors, 'hemisphereLight')
-  .onChange(() => {
-    hemisphereLight.color.setHex(colors.hemisphereLight)
-  })
 
-lightFolder.add(hemisphereLight, 'intensity', 0, 1, 0.001)
+lightFolder.add(spotLightAmbient.position, 'x', -250, 250, 1)
+lightFolder.add(spotLightAmbient.position, 'y', -250, 250, 1)
+lightFolder.add(spotLightAmbient.position, 'z', -250, 250, 1)
+
+lightFolder.add(spotLightRight.position, 'x', -250, 250, 1)
+lightFolder.add(spotLightRight.position, 'y', -250, 250, 1)
+lightFolder.add(spotLightRight.position, 'z', -250, 250, 1)
+
+lightFolder.add(spotLightFront.position, 'x', -250, 250, 1)
+lightFolder.add(spotLightFront.position, 'y', -250, 250, 1)
+lightFolder.add(spotLightFront.position, 'z', -250, 250, 1)
 
 /**
  * Control Panel
@@ -434,7 +438,7 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
   const rowCount = 4
 
   for (let i = 0; i < rowCount; i++) {
-    const spotlightTextGeometry = new TextGeometry(i === rowCount - 1 ? 'Low Quality' : 'Spotlight ' + (rowCount - i), {
+    const spotlightTextGeometry = new TextGeometry(i === rowCount - 1 ? 'Low Quality' : 'Spotlight ' + (rowCount - 1 - i), {
       font,
       size: 0.5,
       height: 0.1,
@@ -548,13 +552,16 @@ const tick = () => {
   // Model animation
   model.position.y = 0.25 * Math.sin(clock.getElapsedTime() * 2)
 
-  // Call tick again on the next frame
+  // Control panel animation
+  controlPanel.position.y = controlPanel.position.y + 0.01 * Math.sin(clock.getElapsedTime() * 2)
+  controlPanelText.position.y = controlPanelText.position.y + 0.01 * Math.sin(clock.getElapsedTime() * 2)
+  backButton.position.y = backButton.position.y + 0.01 * Math.sin(clock.getElapsedTime() * 2)
   window.requestAnimationFrame(tick)
 }
 
 let controlPanelFocused = false
 
-window.addEventListener('click', () => {
+function onClick () {
   raycaster.setFromCamera(pointer, camera)
   const intersects = raycaster.intersectObjects(scene.children)
 
@@ -565,8 +572,9 @@ window.addEventListener('click', () => {
         x: controlPanel.position.x + 10,
         y: controlPanel.position.y + 25,
         z: controlPanel.position.z + 10,
-        duration: 1,
+        duration: 1.5,
         onStart: () => {
+          window.removeEventListener('click', onClick, false)
           controls.enableRotate = false
           controls.enableZoom = false
         },
@@ -575,8 +583,11 @@ window.addEventListener('click', () => {
             x: 0,
             y: 0,
             z: 0,
-            duration: 2,
-            ease: 'power1.inOut'
+            duration: 1.5,
+            ease: 'power1.inOut',
+            onComplete: () => {
+              window.addEventListener('click', onClick, false)
+            }
           })
         },
         ease: 'power1.inOut'
@@ -590,11 +601,12 @@ window.addEventListener('click', () => {
         z: initialCameraPositionZ + 50,
         duration: 1,
         onStart: () => {
+          window.removeEventListener('click', onClick, false)
           gsap.to(controls.target, {
             x: model.position.x,
             y: model.position.y,
             z: model.position.z,
-            duration: 1,
+            duration: 1.5,
             ease: 'power1.inOut'
           })
         },
@@ -603,11 +615,12 @@ window.addEventListener('click', () => {
             x: 0,
             y: initialCameraPositionY,
             z: initialCameraPositionZ,
-            duration: 2,
+            duration: 1.5,
             ease: 'power1.inOut',
             onComplete: () => {
               controls.enableRotate = true
               controls.enableZoom = true
+              window.addEventListener('click', onClick, false)
             }
           })
         },
@@ -627,4 +640,6 @@ window.addEventListener('click', () => {
       }
     }
   })
-}, false)
+}
+
+window.addEventListener('click', onClick, false)
