@@ -111,14 +111,18 @@ controls.minDistance = 1
  */
 const loadingManager = new THREE.LoadingManager()
 const loadingAnimationContainer = document.querySelector('.loading-animation-container')
-const progressBar = document.getElementById('progress-bar')
+const progressBar = document.querySelector('.bar')
+const progressAnimationPercentage = document.getElementById('loading-animation-percentage')
+progressAnimationPercentage.textContent = '0%'
 
 loadingManager.onStart = () => {
   console.log('Loading start')
 }
 
 loadingManager.onProgress = (url, loaded, total) => {
-  progressBar.value = (loaded / total) * 100
+  const percent = Math.ceil((loaded / total) * 100) + '%'
+  progressBar.style.width = percent
+  progressAnimationPercentage.textContent = percent
 }
 
 loadingManager.onLoad = () => {
@@ -133,7 +137,15 @@ loadingManager.onLoad = () => {
       y: initialCameraPositionY,
       z: initialCameraPositionZ,
       duration: 2,
-      ease: 'power1.inOut'
+      ease: 'power1.inOut',
+      onStart: () => {
+        controls.enableRotate = false
+        controls.enableZoom = false
+      },
+      onComplete: () => {
+        controls.enableRotate = true
+        controls.enableZoom = true
+      }
     })
   }, 500)
 }
