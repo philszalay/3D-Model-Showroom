@@ -6,6 +6,9 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader'
 import Stats from 'three/examples/jsm/libs/stats.module'
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry'
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer'
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass'
+import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass'
 import * as dat from 'dat.gui'
 
 const gltfPath = './gltfs/01.gltf'
@@ -52,6 +55,9 @@ scene.add(controlPanelText)
 const backButton = new THREE.Group()
 scene.add(backButton)
 
+const controlPanelButton = new THREE.Group()
+scene.add(controlPanelButton)
+
 // Stats
 const stats = Stats()
 stats.domElement.style.position = 'absolute'
@@ -80,17 +86,16 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 // renderer.shadowMap.enabled = true
 
 /**
- * Raycaster
+ * Composer and outline pass
  */
-const raycaster = new THREE.Raycaster()
-const pointer = new THREE.Vector2()
+const composer = new EffectComposer(renderer)
 
-function onPointerMove (event) {
-  pointer.x = (event.clientX / window.innerWidth) * 2 - 1
-  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1
-}
+const renderPass = new RenderPass(scene, camera)
+composer.addPass(renderPass)
 
-window.addEventListener('pointermove', onPointerMove)
+const outlinePass = new OutlinePass(new THREE.Vector2(sizes.width, sizes.height), scene, camera)
+outlinePass.pulsePeriod = 2.5
+composer.addPass(outlinePass)
 
 /**
  * Animate
@@ -176,6 +181,7 @@ window.addEventListener('resize', () => {
   camera.updateProjectionMatrix()
   renderer.setSize(window.innerWidth, window.innerHeight)
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  composer.setSize(sizes.width, sizes.height)
 }, false)
 
 window.addEventListener('dblclick', () => {
@@ -328,8 +334,8 @@ cylinder.position.y = boxHeight + cylinderHeight / 2
 cylinder.castShadow = true
 showcase.add(cylinder)
 
-const capsuleGeometryLenght = 5
-const capsuleGeometry = new THREE.CapsuleGeometry(3, capsuleGeometryLenght, 64, 64)
+const modelCapsuleGeometryLenght = 5
+const modelCapsuleGeometry = new THREE.CapsuleGeometry(3, modelCapsuleGeometryLenght, 64, 64)
 
 const lowQualityCapsuleMaterial = new THREE.MeshPhysicalMaterial({
   metalness: 1,
@@ -346,8 +352,8 @@ const highQualityCapsuleMaterial = new THREE.MeshPhysicalMaterial({
   side: THREE.DoubleSide
 })
 
-const modelCapsule = new THREE.Mesh(capsuleGeometry, highQualityCapsuleMaterial)
-modelCapsule.position.y = cylinderHeight + capsuleGeometryLenght / 2 + estimatedCapsuleCapSegmentHeight + boxHeight
+const modelCapsule = new THREE.Mesh(modelCapsuleGeometry, lowQualityCapsuleMaterial)
+modelCapsule.position.y = cylinderHeight + modelCapsuleGeometryLenght / 2 + estimatedCapsuleCapSegmentHeight + boxHeight
 modelCapsule.castShadow = true
 showcase.add(modelCapsule)
 
@@ -355,6 +361,7 @@ showcase.add(modelCapsule)
  * Debug
  */
 const gui = new dat.GUI()
+
 const roomFolder = gui.addFolder('Room')
 
 roomFolder
@@ -406,29 +413,38 @@ controlPanel.rotateOnWorldAxis(new THREE.Vector3(1, 0, -1).normalize(), -Math.at
 scene.add(controlPanel)
 
 /**
- * Back Button Background
+ * Back button
  */
-const backButtonGeometryWidth = 4
-const backButtonGeometryHeight = 2
+const backButtonGeometryWidth = 3
+const backButtonGeometryHeight = 1.5
 
 const backButtonGeometry = new THREE.BoxBufferGeometry(backButtonGeometryWidth, backButtonGeometryHeight, 0.1)
 
-const backButtonMaterial = new THREE.MeshMatcapMaterial({
+const buttonMaterial = new THREE.MeshMatcapMaterial({
   color: 0xff0000
 })
 
-const padding = 0.5
+const padding = 0.50
 
-const backButtonBackground = new THREE.Mesh(backButtonGeometry, backButtonMaterial)
+const backButtonBackground = new THREE.Mesh(backButtonGeometry, buttonMaterial)
 backButtonBackground.position.x = controlPanelWidth / 2 - backButtonGeometryWidth / 2 - padding
 backButtonBackground.position.y = -controlPanelHeight / 2 + backButtonGeometryHeight / 2 + padding
 backButtonBackground.position.z = 0.5
+
+/**
+ * Control panel button
+ */
+const controlPanelButtonGeometryWidth = 6
+const controlPanelButtonGeometryHeight = 2
+
+const controlPanelButtonBackgroundGeometry = new THREE.BoxBufferGeometry(controlPanelButtonGeometryWidth, controlPanelButtonGeometryHeight, 0.1)
+const controlPanelButtonBackground = new THREE.Mesh(controlPanelButtonBackgroundGeometry, buttonMaterial)
 
 const toggleSwitches = []
 
 const fontLoader = new FontLoader(loadingManager)
 fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
-  const textMaterial = new THREE.MeshNormalMaterial()
+  const textMaterial = new THREE.MeshToonMaterial()
 
   const settingsTextGeometry = new TextGeometry('Control Panel', {
     font,
@@ -450,7 +466,7 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
   const rowCount = 4
 
   for (let i = 0; i < rowCount; i++) {
-    const spotlightTextGeometry = new TextGeometry(i === rowCount - 1 ? 'Low Quality' : 'Spotlight ' + (rowCount - 1 - i), {
+    const spotlightTextGeometry = new TextGeometry(i === rowCount - 1 ? 'High Quality' : 'Spotlight ' + (rowCount - 1 - i), {
       font,
       size: 0.5,
       height: 0.1,
@@ -475,7 +491,9 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
 
     const capsule = new THREE.Mesh(capsuleGeometry, capsuleMaterial)
 
-    capsule.position.x = capsuleWidth / 2
+    const capsuleOffset = 0
+
+    capsule.position.x = capsuleWidth / 2 + capsuleOffset
     capsule.position.y = spotlightText.position.y + capsuleRadius / 2
     capsule.position.z = 0.5
     capsule.rotation.z = -Math.PI / 2
@@ -484,7 +502,7 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
     const sphereGeometry = new THREE.SphereGeometry(sphrereGeometryRadius, 8, 8)
     const sphere = new THREE.Mesh(sphereGeometry, textMaterial)
 
-    sphere.position.x = sphrereGeometryRadius / 2
+    sphere.position.x = sphrereGeometryRadius / 2 + capsuleOffset
     sphere.position.y = spotlightText.position.y + capsuleRadius / 2
     sphere.position.z = 0.5
 
@@ -493,34 +511,34 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
 
       if (this.index === rowCount - 1) {
         if (this.active) {
-          console.log('new material')
-          modelCapsule.material = lowQualityCapsuleMaterial
-        } else {
           modelCapsule.material = highQualityCapsuleMaterial
+        } else {
+          modelCapsule.material = lowQualityCapsuleMaterial
         }
       } else {
         this.active ? scene.add(spotLights[this.index]) : scene.remove(spotLights[this.index])
       }
 
-      const newPositionX = this.active ? capsuleWidth - sphrereGeometryRadius / 2 : sphrereGeometryRadius / 2
+      const newPositionX = this.active ? capsuleWidth - sphrereGeometryRadius / 2 + capsuleOffset : sphrereGeometryRadius / 2 + capsuleOffset
+
       gsap.to(sphere.position, {
         x: newPositionX,
-        y: sphere.position.y,
-        z: sphere.position.z,
         duration: 0.5,
         ease: 'power1.inOut'
       })
     }
 
+    const toggleSwitch = new THREE.Group()
+    toggleSwitch.add(capsule, sphere)
+
     toggleSwitches.push({
-      capsule,
-      sphere,
+      toggleSwitch,
       index: i,
       active: false,
       toggle
     })
 
-    controlPanelText.add(spotlightText, capsule, sphere)
+    controlPanelText.add(spotlightText, toggleSwitch)
   }
 
   controlPanelText.position.set(controlPanel.position.x, controlPanel.position.y, controlPanel.position.z)
@@ -537,6 +555,7 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
   backButtonTextGeometry.computeBoundingBox()
 
   const backButtonText = new THREE.Mesh(backButtonTextGeometry, textMaterial)
+
   backButtonText.position.x = controlPanelWidth / 2 - backButtonGeometryWidth / 2 - (backButtonTextGeometry.boundingBox.max.x - backButtonTextGeometry.boundingBox.min.x) / 2 - padding
   backButtonText.position.y = -controlPanelHeight / 2 + backButtonGeometryHeight / 2 - (backButtonTextGeometry.boundingBox.max.y - backButtonTextGeometry.boundingBox.min.y) / 2 + padding
   backButtonText.position.z = 0.5
@@ -545,7 +564,67 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
   backButton.position.set(controlPanel.position.x, controlPanel.position.y, controlPanel.position.z)
   backButton.rotation.y = Math.atan(controlPanelText.position.z / controlPanelText.position.x)
   backButton.rotateOnWorldAxis(new THREE.Vector3(1, 0, -1).normalize(), -Math.atan(controlPanelText.position.y / controlPanelText.position.z))
+
+  /**
+   * Control panel button
+   */
+  const controlPanelButtonTextGeometry = new TextGeometry('Control Panel', {
+    font,
+    size: 0.5,
+    height: 0.1,
+    curveSegments: 12
+  })
+
+  controlPanelButtonTextGeometry.center()
+
+  const controlPanelButtonText = new THREE.Mesh(controlPanelButtonTextGeometry, textMaterial)
+  controlPanelButtonText.position.z = 0.1
+
+  controlPanelButton.add(controlPanelButtonBackground, controlPanelButtonText)
+  controlPanelButton.position.set(8, -2, 0)
 })
+
+/**
+ * Raycaster
+ */
+const raycaster = new THREE.Raycaster()
+const pointer = new THREE.Vector2()
+
+function onPointerMove (event) {
+  pointer.x = (event.clientX / window.innerWidth) * 2 - 1
+  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1
+
+  raycaster.setFromCamera(pointer, camera)
+  const intersects = raycaster.intersectObjects(scene.children)
+
+  if (intersects.length) {
+    switch (intersects[0].object.parent) {
+      case controlPanelButton:
+        outlinePass.selectedObjects = [controlPanelButton]
+        break
+      case backButton:
+        outlinePass.selectedObjects = [backButton]
+        break
+      case toggleSwitches[0].toggleSwitch:
+        outlinePass.selectedObjects = [toggleSwitches[0].toggleSwitch]
+        break
+      case toggleSwitches[1].toggleSwitch:
+        outlinePass.selectedObjects = [toggleSwitches[1].toggleSwitch]
+        break
+      case toggleSwitches[2].toggleSwitch:
+        outlinePass.selectedObjects = [toggleSwitches[2].toggleSwitch]
+        break
+      case toggleSwitches[3].toggleSwitch:
+        outlinePass.selectedObjects = [toggleSwitches[3].toggleSwitch]
+        break
+      default:
+        outlinePass.selectedObjects = []
+        break
+    }
+  }
+}
+
+window.addEventListener('pointermove', onPointerMove)
 
 /**
    *  Animation loop
@@ -555,8 +634,8 @@ const clock = new THREE.Clock()
 const tick = () => {
   stats.update()
 
-  // Render
-  renderer.render(scene, camera)
+  // Composer
+  composer.render()
 
   // Controls
   controls.update()
@@ -579,7 +658,7 @@ function onClick () {
 
   // Control panel
   intersects.forEach((intersect) => {
-    if (intersect.object === modelCapsule) {
+    if (intersect.object === controlPanelButtonBackground) {
       gsap.to(camera.position, {
         x: controlPanel.position.x + 10,
         y: controlPanel.position.y + 25,
@@ -587,6 +666,7 @@ function onClick () {
         duration: 1.5,
         onStart: () => {
           window.removeEventListener('click', onClick, false)
+          outlinePass.selectedObjects = []
           controls.enableRotate = false
           controls.enableZoom = false
         },
@@ -614,6 +694,7 @@ function onClick () {
         duration: 1,
         onStart: () => {
           window.removeEventListener('click', onClick, false)
+          outlinePass.selectedObjects = []
           gsap.to(controls.target, {
             x: model.position.x,
             y: model.position.y,
@@ -641,17 +722,16 @@ function onClick () {
 
       controlPanelFocused = false
     }
-
-    // Toggle switches
-    if (controlPanelFocused) {
-      const toggleSwitchIndex = toggleSwitches.map(toggleSwitch => toggleSwitch.capsule).indexOf(intersect.object)
-
-      if (toggleSwitchIndex > -1) {
-        // Hint: Could be improved by changing the active property in the toggle function
-        toggleSwitches[toggleSwitchIndex].toggle()
-      }
-    }
   })
+
+  // Toggle switches
+  if (controlPanelFocused) {
+    const toggleSwitchIndex = toggleSwitches.map(toggleSwitch => toggleSwitch.toggleSwitch).indexOf(intersects[0].object.parent)
+
+    if (toggleSwitchIndex > -1) {
+      toggleSwitches[toggleSwitchIndex].toggle()
+    }
+  }
 }
 
 window.addEventListener('click', onClick, false)
