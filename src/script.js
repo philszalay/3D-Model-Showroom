@@ -39,14 +39,14 @@ const scene = new THREE.Scene()
  * Group
  */
 const estimatedCapsuleCapSegmentHeight = 2.1
-const positionY = -10 - estimatedCapsuleCapSegmentHeight
+const floorPositionY = -10 - estimatedCapsuleCapSegmentHeight
 
 const room = new THREE.Group()
-room.position.y = positionY
+room.position.y = floorPositionY
 scene.add(room)
 
 const showcase = new THREE.Group()
-showcase.position.y = positionY
+showcase.position.y = floorPositionY
 scene.add(showcase)
 
 const controlPanelText = new THREE.Group()
@@ -67,7 +67,7 @@ document.body.appendChild(stats.domElement)
 /**
  * Camera
  */
-const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 1000)
+const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 1, 325)
 
 const initialCameraPositionZ = 25
 const initialCameraPositionY = 5
@@ -83,18 +83,18 @@ const renderer = new THREE.WebGLRenderer({
 
 renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-// renderer.shadowMap.enabled = true
 
 /**
  * Composer and outline pass
  */
 const composer = new EffectComposer(renderer)
+composer.setSize(sizes.width, sizes.height)
 
 const renderPass = new RenderPass(scene, camera)
 composer.addPass(renderPass)
 
 const outlinePass = new OutlinePass(new THREE.Vector2(sizes.width, sizes.height), scene, camera)
-outlinePass.pulsePeriod = 2.5
+// outlinePass.pulsePeriod = 2.5
 composer.addPass(outlinePass)
 
 /**
@@ -109,7 +109,9 @@ const wallAndFloorDimension = 250
 
 controls.maxPolarAngle = Math.PI / 1.9
 controls.maxDistance = wallAndFloorDimension / 2
-controls.minDistance = 1
+controls.minDistance = 2
+
+controls.addEventListener('change', onPointerMove)
 
 /**
  * Loading Manager
@@ -131,12 +133,14 @@ loadingManager.onProgress = (url, loaded, total) => {
 }
 
 loadingManager.onLoad = () => {
+  window.addEventListener('pointermove', onPointerMove)
+  window.addEventListener('click', onClick, false)
+
   setTimeout(() => {
     loadingAnimationContainer.style.display = 'none'
 
     window.requestAnimationFrame(tick)
-
-    // Intro animation
+    // // Intro animation
     gsap.fromTo(camera.position, { x: -25, y: 25, z: 25 }, {
       x: camera.position.x,
       y: initialCameraPositionY,
@@ -163,10 +167,10 @@ loadingManager.onError = (e) => {
  * Textures
  */
 const textureLoader = new THREE.TextureLoader(loadingManager)
-const standTexture = textureLoader.load('./textures/TexturesCom_Marble_TilesSquare_512_albedo.png')
-const standTextureNormal = textureLoader.load('./textures/TexturesCom_Marble_TilesSquare_512_normal.png')
-const standTextureRoughness = textureLoader.load('./textures/TexturesCom_Marble_TilesSquare_512_roughness.png')
 const floorTextureNormal = textureLoader.load('./textures/sl2qedtp_8K_Normal.jpg')
+const standTextureNormal = textureLoader.load('./textures/TexturesCom_Marble_TilesSquare_512_normal.png')
+const standTexture = textureLoader.load('./textures/TexturesCom_Marble_TilesSquare_512_albedo.png')
+const standTextureRoughness = textureLoader.load('./textures/TexturesCom_Marble_TilesSquare_512_roughness.png')
 
 /**
  * glTF Loader
@@ -177,10 +181,16 @@ const gltfLoader = new GLTFLoader(loadingManager)
  * Listeners
  */
 window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight
+  sizes.width = window.innerWidth
+  sizes.height = window.innerHeight
+
+  camera.aspect = sizes.width / sizes.height
   camera.updateProjectionMatrix()
-  renderer.setSize(window.innerWidth, window.innerHeight)
+
+  renderer.setSize(sizes.width, sizes.height)
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+
+  composer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   composer.setSize(sizes.width, sizes.height)
 }, false)
 
@@ -233,36 +243,21 @@ scene.add(spotLightAmbient)
 
 const spotLightLeft = new THREE.SpotLight(0xffffff)
 spotLightLeft.position.set(-15, 25, 10)
-spotLightLeft.castShadow = true
-spotLightLeft.shadow.mapSize.width = 1024
-spotLightLeft.shadow.mapSize.height = 1024
-spotLightLeft.shadow.camera.near = 1
-spotLightLeft.shadow.camera.far = 75
-spotLightLeft.shadow.camera.fov = 30
 spotLights.push(spotLightLeft)
 
 const spotLightRight = new THREE.SpotLight(0xffffff)
 spotLightRight.position.set(15, 25, 10)
-spotLightRight.castShadow = true
-spotLightRight.shadow.mapSize.width = 1024
-spotLightRight.shadow.mapSize.height = 1024
-spotLightRight.shadow.camera.near = 1
-spotLightRight.shadow.camera.far = 75
 spotLights.push(spotLightRight)
 
 const spotLightFront = new THREE.SpotLight(0xffffff)
 spotLightFront.position.set(0, 15, 25)
-spotLightFront.castShadow = true
-spotLightFront.shadow.mapSize.width = 1024
-spotLightFront.shadow.mapSize.height = 1024
-spotLightFront.shadow.camera.near = 1
-spotLightFront.shadow.camera.far = 75
 spotLights.push(spotLightFront)
 
 /**
  * Walls and Floor
  */
-const roomGeometry = new THREE.PlaneBufferGeometry(wallAndFloorDimension, wallAndFloorDimension)
+const roomGeometry = new THREE.PlaneBufferGeometry(wallAndFloorDimension, wallAndFloorDimension / 2)
+const floorGeometry = new THREE.PlaneBufferGeometry(wallAndFloorDimension, wallAndFloorDimension)
 
 const floorMaterial = new THREE.MeshStandardMaterial({
   color: '#ffffff',
@@ -271,9 +266,9 @@ const floorMaterial = new THREE.MeshStandardMaterial({
   normalMap: floorTextureNormal
 })
 
-const floor = new THREE.Mesh(roomGeometry, floorMaterial)
+const floor = new THREE.Mesh(floorGeometry, floorMaterial)
 floor.rotation.x = -Math.PI / 2
-floor.receiveShadow = true
+
 room.add(floor)
 
 const roomMaterial = new THREE.MeshPhysicalMaterial({
@@ -282,26 +277,32 @@ const roomMaterial = new THREE.MeshPhysicalMaterial({
   roughness: 0.644
 })
 
+const ceiling = new THREE.Mesh(floorGeometry, roomMaterial)
+ceiling.position.y = wallAndFloorDimension / 2
+ceiling.rotation.x = Math.PI / 2
+
+room.add(ceiling)
+
 const wallBehind = new THREE.Mesh(roomGeometry, roomMaterial)
-wallBehind.position.y = wallAndFloorDimension / 2
+wallBehind.position.y = wallAndFloorDimension / 4
 wallBehind.position.z = -wallAndFloorDimension / 2
 room.add(wallBehind)
 
 const wallFront = new THREE.Mesh(roomGeometry, roomMaterial)
-wallFront.position.y = wallAndFloorDimension / 2
+wallFront.position.y = wallAndFloorDimension / 4
 wallFront.position.z = wallAndFloorDimension / 2
 wallFront.rotation.x = Math.PI
 room.add(wallFront)
 
 const wallLeft = new THREE.Mesh(roomGeometry, roomMaterial)
 wallLeft.position.x = -wallAndFloorDimension / 2
-wallLeft.position.y = wallAndFloorDimension / 2
+wallLeft.position.y = wallAndFloorDimension / 4
 wallLeft.rotation.y = Math.PI / 2
 room.add(wallLeft)
 
 const wallRight = new THREE.Mesh(roomGeometry, roomMaterial)
 wallRight.position.x = wallAndFloorDimension / 2
-wallRight.position.y = wallAndFloorDimension / 2
+wallRight.position.y = wallAndFloorDimension / 4
 wallRight.rotation.y = -Math.PI / 2
 room.add(wallRight)
 
@@ -309,6 +310,25 @@ const wallTop = new THREE.Mesh(roomGeometry, roomMaterial)
 wallTop.position.y = wallAndFloorDimension
 wallTop.rotation.x = Math.PI / 2
 room.add(wallTop)
+
+const baseBoardHeight = 5
+
+const baseBoardGeometry = new THREE.BoxBufferGeometry(wallAndFloorDimension, baseBoardHeight, 0.1, 64, 64)
+const baseBoardMaterial = new THREE.MeshStandardMaterial({
+  metalness: 1,
+  roughness: 0.388
+})
+
+const baseBoardCount = 4
+
+for (let i = 0; i < baseBoardCount; i++) {
+  const baseBoard = new THREE.Mesh(baseBoardGeometry, baseBoardMaterial)
+  baseBoard.position.set(i === 2 ? -wallAndFloorDimension / 2 : i === 3 ? wallAndFloorDimension / 2 : 0, baseBoardHeight / 2, i === 0 ? -wallAndFloorDimension / 2 : i === 1 ? wallAndFloorDimension / 2 : 0)
+
+  baseBoard.rotation.y = (i === 2 || i === 3) ? Math.PI / 2 : 0
+
+  room.add(baseBoard)
+}
 
 /**
  * Showcase
@@ -320,19 +340,17 @@ const standMaterial = new THREE.MeshStandardMaterial({
 })
 
 const boxHeight = 0.3
-const boxGeometry = new THREE.BoxBufferGeometry(5, boxHeight, 5)
-const box = new THREE.Mesh(boxGeometry, standMaterial)
-box.translateY(boxHeight / 2)
-box.castShadow = true
-showcase.add(box)
+const capsuleBoxGeometry = new THREE.BoxBufferGeometry(5, boxHeight, 5)
+const capsuleBox = new THREE.Mesh(capsuleBoxGeometry, standMaterial)
+capsuleBox.translateY(boxHeight / 2)
+showcase.add(capsuleBox)
 
-const cylinderHeight = 7
-const cylinderGeometry = new THREE.CylinderBufferGeometry(2, 1, cylinderHeight, 32, 32)
-const cylinder = new THREE.Mesh(cylinderGeometry, standMaterial)
-cylinder.translateY(cylinderHeight / 2)
-cylinder.position.y = boxHeight + cylinderHeight / 2
-cylinder.castShadow = true
-showcase.add(cylinder)
+const capsuleCylinderHeight = 7
+const capsuleCylinderGeometry = new THREE.CylinderBufferGeometry(2, 1, capsuleCylinderHeight, 32, 32)
+const capsuleCylinder = new THREE.Mesh(capsuleCylinderGeometry, standMaterial)
+capsuleCylinder.translateY(capsuleCylinderHeight / 2)
+capsuleCylinder.position.y = boxHeight + capsuleCylinderHeight / 2
+showcase.add(capsuleCylinder)
 
 const modelCapsuleGeometryLenght = 5
 const modelCapsuleGeometry = new THREE.CapsuleGeometry(3, modelCapsuleGeometryLenght, 64, 64)
@@ -353,14 +371,16 @@ const highQualityCapsuleMaterial = new THREE.MeshPhysicalMaterial({
 })
 
 const modelCapsule = new THREE.Mesh(modelCapsuleGeometry, lowQualityCapsuleMaterial)
-modelCapsule.position.y = cylinderHeight + modelCapsuleGeometryLenght / 2 + estimatedCapsuleCapSegmentHeight + boxHeight
-modelCapsule.castShadow = true
+modelCapsule.position.y = capsuleCylinderHeight + modelCapsuleGeometryLenght / 2 + estimatedCapsuleCapSegmentHeight + boxHeight
 showcase.add(modelCapsule)
 
 /**
  * Debug
  */
 const gui = new dat.GUI()
+
+gui.add(baseBoardMaterial, 'roughness', 0, 1, 0.001)
+gui.add(baseBoardMaterial, 'metalness', 0, 1, 0.001)
 
 const roomFolder = gui.addFolder('Room')
 
@@ -397,11 +417,8 @@ lightFolder.add(spotLightFront.position, 'z', -250, 250, 1)
  */
 const controlPanelWidth = 24
 const controlPanelHeight = 8
-
-const controlPlaneGeometry = new THREE.BoxBufferGeometry(controlPanelWidth, controlPanelHeight, 1)
-const controlPanelMaterial = new THREE.MeshStandardMaterial({
-  color: 'grey'
-})
+const controlPlaneGeometry = new THREE.BoxBufferGeometry(controlPanelWidth, controlPanelHeight, 1.1)
+const controlPanelMaterial = standMaterial
 
 const controlPanel = new THREE.Mesh(controlPlaneGeometry, controlPanelMaterial)
 controlPanel.position.x = 50
@@ -420,16 +437,16 @@ const backButtonGeometryHeight = 1.5
 
 const backButtonGeometry = new THREE.BoxBufferGeometry(backButtonGeometryWidth, backButtonGeometryHeight, 0.1)
 
-const buttonMaterial = new THREE.MeshMatcapMaterial({
+const backButtonMaterial = new THREE.MeshMatcapMaterial({
   color: 0xff0000
 })
 
-const padding = 0.50
+const padding = 0.5
 
-const backButtonBackground = new THREE.Mesh(backButtonGeometry, buttonMaterial)
+const backButtonBackground = new THREE.Mesh(backButtonGeometry, backButtonMaterial)
 backButtonBackground.position.x = controlPanelWidth / 2 - backButtonGeometryWidth / 2 - padding
 backButtonBackground.position.y = -controlPanelHeight / 2 + backButtonGeometryHeight / 2 + padding
-backButtonBackground.position.z = 0.5
+backButtonBackground.position.z = 0.6
 
 /**
  * Control panel button
@@ -437,8 +454,22 @@ backButtonBackground.position.z = 0.5
 const controlPanelButtonGeometryWidth = 6
 const controlPanelButtonGeometryHeight = 2
 
-const controlPanelButtonBackgroundGeometry = new THREE.BoxBufferGeometry(controlPanelButtonGeometryWidth, controlPanelButtonGeometryHeight, 0.1)
-const controlPanelButtonBackground = new THREE.Mesh(controlPanelButtonBackgroundGeometry, buttonMaterial)
+const controlPanelButtonBackgroundGeometry = new THREE.BoxBufferGeometry(controlPanelButtonGeometryWidth, controlPanelButtonGeometryHeight, 0.2)
+const controlPanelButtonBackground = new THREE.Mesh(controlPanelButtonBackgroundGeometry, standMaterial)
+
+const controlPanelButtonCylinderHeight = floorPositionY + controlPanelButtonGeometryHeight / 2
+const controlPanelButtonCylinderGeometry = new THREE.CylinderBufferGeometry(0.1, 0.05, controlPanelButtonCylinderHeight, 32, 32)
+const controlPanelButtonCylinder = new THREE.Mesh(controlPanelButtonCylinderGeometry, standMaterial)
+controlPanelButtonCylinder.position.y = controlPanelButtonCylinderHeight + boxHeight / 2 + 4
+controlPanelButtonCylinder.position.x = 8
+scene.add(controlPanelButtonCylinder)
+
+const controlPanelBoxGeometry = new THREE.BoxBufferGeometry(2, boxHeight, 2)
+const controlPanelBox = new THREE.Mesh(controlPanelBoxGeometry, standMaterial)
+controlPanelBox.translateY(boxHeight / 2)
+controlPanelBox.position.y = boxHeight + floorPositionY
+controlPanelBox.position.x = 8
+scene.add(controlPanelBox)
 
 const toggleSwitches = []
 
@@ -495,7 +526,7 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
 
     capsule.position.x = capsuleWidth / 2 + capsuleOffset
     capsule.position.y = spotlightText.position.y + capsuleRadius / 2
-    capsule.position.z = 0.5
+    capsule.position.z = 0.6
     capsule.rotation.z = -Math.PI / 2
 
     const sphrereGeometryRadius = 0.2
@@ -504,7 +535,7 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
 
     sphere.position.x = sphrereGeometryRadius / 2 + capsuleOffset
     sphere.position.y = spotlightText.position.y + capsuleRadius / 2
-    sphere.position.z = 0.5
+    sphere.position.z = 0.6
 
     const toggle = function () {
       this.active = !this.active
@@ -558,7 +589,7 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
 
   backButtonText.position.x = controlPanelWidth / 2 - backButtonGeometryWidth / 2 - (backButtonTextGeometry.boundingBox.max.x - backButtonTextGeometry.boundingBox.min.x) / 2 - padding
   backButtonText.position.y = -controlPanelHeight / 2 + backButtonGeometryHeight / 2 - (backButtonTextGeometry.boundingBox.max.y - backButtonTextGeometry.boundingBox.min.y) / 2 + padding
-  backButtonText.position.z = 0.5
+  backButtonText.position.z = 0.7
 
   backButton.add(backButtonBackground, backButtonText)
   backButton.position.set(controlPanel.position.x, controlPanel.position.y, controlPanel.position.z)
@@ -591,8 +622,8 @@ const raycaster = new THREE.Raycaster()
 const pointer = new THREE.Vector2()
 
 function onPointerMove (event) {
-  pointer.x = (event.clientX / window.innerWidth) * 2 - 1
-  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1
+  pointer.x = (event.clientX / sizes.width) * 2 - 1
+  pointer.y = -(event.clientY / sizes.height) * 2 + 1
 
   raycaster.setFromCamera(pointer, camera)
   const intersects = raycaster.intersectObjects(scene.children)
@@ -600,7 +631,7 @@ function onPointerMove (event) {
   if (intersects.length) {
     switch (intersects[0].object.parent) {
       case controlPanelButton:
-        outlinePass.selectedObjects = [controlPanelButton]
+        outlinePass.selectedObjects = [controlPanelButtonBackground]
         break
       case backButton:
         outlinePass.selectedObjects = [backButton]
@@ -623,8 +654,6 @@ function onPointerMove (event) {
     }
   }
 }
-
-window.addEventListener('pointermove', onPointerMove)
 
 /**
    *  Animation loop
@@ -657,8 +686,8 @@ function onClick () {
   const intersects = raycaster.intersectObjects(scene.children)
 
   // Control panel
-  intersects.forEach((intersect) => {
-    if (intersect.object === controlPanelButtonBackground) {
+  if (intersects.length) {
+    if (intersects[0].object.parent === controlPanelButton) {
       gsap.to(camera.position, {
         x: controlPanel.position.x + 10,
         y: controlPanel.position.y + 25,
@@ -686,7 +715,7 @@ function onClick () {
       })
 
       controlPanelFocused = true
-    } else if (intersect.object === backButtonBackground) {
+    } else if (intersects[0].object.parent === backButton) {
       gsap.to(camera.position, {
         x: 0,
         y: initialCameraPositionY,
@@ -722,16 +751,14 @@ function onClick () {
 
       controlPanelFocused = false
     }
-  })
 
-  // Toggle switches
-  if (controlPanelFocused) {
-    const toggleSwitchIndex = toggleSwitches.map(toggleSwitch => toggleSwitch.toggleSwitch).indexOf(intersects[0].object.parent)
+    // Toggle switches
+    if (controlPanelFocused) {
+      const toggleSwitchIndex = toggleSwitches.map(toggleSwitch => toggleSwitch.toggleSwitch).indexOf(intersects[0].object.parent)
 
-    if (toggleSwitchIndex > -1) {
-      toggleSwitches[toggleSwitchIndex].toggle()
+      if (toggleSwitchIndex > -1) {
+        toggleSwitches[toggleSwitchIndex].toggle()
+      }
     }
   }
 }
-
-window.addEventListener('click', onClick, false)
