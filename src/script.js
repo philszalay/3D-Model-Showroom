@@ -16,8 +16,12 @@ const gltfPath = './gltfs/01.gltf'
  * Colors
  */
 const colors = {
-  room: 0x000000,
-  hemisphereLight: 0xc5
+  floorMaterial: 0xffffff,
+  pointLightRed: 0xff0000,
+  pointLightGreen: 0x00ff00,
+  spotlight: 0xffffff,
+  room: 0x2121ff,
+  backButton: 0xff0000
 }
 
 /**
@@ -28,14 +32,18 @@ const sizes = {
   height: window.innerHeight
 }
 
-// Canvas
+/**
+ * Canvas
+ */
 const canvas = document.querySelector('canvas.webgl')
 
-// Scene
+/**
+ * Scene
+ */
 const scene = new THREE.Scene()
 
 /**
- * Group
+ * Groups
  */
 const estimatedCapsuleCapSegmentHeight = 2.1
 const floorPositionY = -10 - estimatedCapsuleCapSegmentHeight
@@ -57,7 +65,9 @@ scene.add(backButton)
 const controlPanelButton = new THREE.Group()
 scene.add(controlPanelButton)
 
-// Stats
+/**
+ * Stats
+ */
 const stats = Stats()
 stats.domElement.style.position = 'absolute'
 stats.domElement.style.top = '0px'
@@ -93,7 +103,7 @@ const renderPass = new RenderPass(scene, camera)
 composer.addPass(renderPass)
 
 const outlinePass = new OutlinePass(new THREE.Vector2(sizes.width, sizes.height), scene, camera)
-// outlinePass.pulsePeriod = 2.5
+outlinePass.pulsePeriod = 2
 composer.addPass(outlinePass)
 
 /**
@@ -137,7 +147,7 @@ loadingManager.onLoad = () => {
     loadingAnimationContainer.style.display = 'none'
 
     window.requestAnimationFrame(tick)
-    // // Intro animation
+
     gsap.fromTo(camera.position, { x: -25, y: 25, z: 25 }, {
       x: camera.position.x,
       y: initialCameraPositionY,
@@ -218,32 +228,32 @@ gltfLoader.load(
 const pointLightsCount = 2
 
 for (let i = 0; i < pointLightsCount; i++) {
-  const pointLight = new THREE.PointLight('green', 0.5, 0, 2)
+  const pointLight = new THREE.PointLight(colors.pointLightGreen, 0.5, 0, 2)
   pointLight.position.set((Math.random() - 0.5) * 50, Math.random() * 5, (Math.random() - 0.5) * 50)
   scene.add(pointLight)
 }
 
 for (let i = 0; i < pointLightsCount; i++) {
-  const pointLight = new THREE.PointLight('red', 0.5, 0, 2)
+  const pointLight = new THREE.PointLight(colors.pointLightRed, 0.5, 0, 2)
   pointLight.position.set((Math.random() - 0.5) * 50, Math.random() * 10, (Math.random() - 0.5) * 50)
   scene.add(pointLight)
 }
 
 const spotLights = []
 
-const spotLightAmbient = new THREE.SpotLight(0xffffff, 0.512)
+const spotLightAmbient = new THREE.SpotLight(colors.spotlight, 0.512)
 spotLightAmbient.position.set(6, -149, -49)
 scene.add(spotLightAmbient)
 
-const spotLightRight = new THREE.SpotLight(0xffffff)
+const spotLightRight = new THREE.SpotLight(colors.spotlight)
 spotLightRight.position.set(15, 15, 15)
 spotLights.push(spotLightRight)
 
-const spotLightLeft = new THREE.SpotLight(0xffffff)
+const spotLightLeft = new THREE.SpotLight(colors.spotlight)
 spotLightLeft.position.set(-15, 15, 15)
 spotLights.push(spotLightLeft)
 
-const spotLightFront = new THREE.SpotLight(0xffffff, 0.5)
+const spotLightFront = new THREE.SpotLight(colors.spotlight, 0.5)
 spotLightFront.position.set(0, 250, 0)
 spotLights.push(spotLightFront)
 
@@ -254,7 +264,7 @@ const roomGeometry = new THREE.PlaneBufferGeometry(wallAndFloorDimension, wallAn
 const floorGeometry = new THREE.PlaneBufferGeometry(wallAndFloorDimension, wallAndFloorDimension)
 
 const floorMaterial = new THREE.MeshStandardMaterial({
-  color: '#ffffff',
+  color: colors.floorMaterial,
   metalness: 0.65,
   roughness: 0,
   normalMap: floorTextureNormal
@@ -266,7 +276,7 @@ floor.rotation.x = -Math.PI / 2
 room.add(floor)
 
 const roomMaterial = new THREE.MeshPhysicalMaterial({
-  color: '#2121ff',
+  color: colors.room,
   metalness: 1,
   roughness: 0.644
 })
@@ -394,7 +404,7 @@ const backButtonGeometryHeight = 1.5
 const backButtonGeometry = new THREE.BoxBufferGeometry(backButtonGeometryWidth, backButtonGeometryHeight, 0.1)
 
 const backButtonMaterial = new THREE.MeshMatcapMaterial({
-  color: 0xff0000
+  color: colors.backButton
 })
 
 const padding = 0.5
@@ -413,10 +423,10 @@ const controlPanelButtonGeometryHeight = 2
 const controlPanelButtonBackgroundGeometry = new THREE.BoxBufferGeometry(controlPanelButtonGeometryWidth, controlPanelButtonGeometryHeight, 0.2)
 const controlPanelButtonBackground = new THREE.Mesh(controlPanelButtonBackgroundGeometry, standMaterial)
 
-const controlPanelButtonCylinderHeight = floorPositionY + controlPanelButtonGeometryHeight / 2
-const controlPanelButtonCylinderGeometry = new THREE.CylinderBufferGeometry(0.05, 0.1, controlPanelButtonCylinderHeight, 32, 32)
+const controlPanelButtonCylinderHeight = -floorPositionY - controlPanelButtonGeometryHeight / 2 - 4
+const controlPanelButtonCylinderGeometry = new THREE.CylinderBufferGeometry(0.1, 0.05, controlPanelButtonCylinderHeight, 32, 32)
 const controlPanelButtonCylinder = new THREE.Mesh(controlPanelButtonCylinderGeometry, standMaterial)
-controlPanelButtonCylinder.position.y = controlPanelButtonCylinderHeight + boxHeight / 2 + 4
+controlPanelButtonCylinder.position.y = floorPositionY + controlPanelButtonCylinderHeight / 2 + boxHeight / 2
 controlPanelButtonCylinder.position.x = 8
 scene.add(controlPanelButtonCylinder)
 
@@ -568,7 +578,8 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
   controlPanelButtonText.position.z = 0.1
 
   controlPanelButton.add(controlPanelButtonBackground, controlPanelButtonText)
-  controlPanelButton.position.set(8, -2, 0)
+  controlPanelButton.position.set(8, -5, 0)
+  controlPanelButton.rotateX(-Math.PI / 8)
 })
 
 /**
@@ -643,7 +654,6 @@ function onClick () {
   raycaster.setFromCamera(pointer, camera)
   const intersects = raycaster.intersectObjects(scene.children)
 
-  // Control panel
   if (intersects.length) {
     if (intersects[0].object.parent === controlPanelButton) {
       gsap.to(camera.position, {
@@ -707,7 +717,6 @@ function onClick () {
       })
     }
 
-    // Toggle switches
     const toggleSwitchIndex = toggleSwitches.map(toggleSwitch => toggleSwitch.toggleSwitch).indexOf(intersects[0].object.parent)
 
     if (toggleSwitchIndex > -1) {
