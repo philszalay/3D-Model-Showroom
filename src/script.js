@@ -111,8 +111,6 @@ controls.maxPolarAngle = Math.PI / 1.9
 controls.maxDistance = wallAndFloorDimension / 2
 controls.minDistance = 2
 
-controls.addEventListener('change', onPointerMove)
-
 /**
  * Loading Manager
  */
@@ -133,6 +131,10 @@ loadingManager.onProgress = (url, loaded, total) => {
 }
 
 loadingManager.onLoad = () => {
+  controls.addEventListener('change', () => {
+    checkForObjectHover()
+  })
+
   window.addEventListener('pointermove', onPointerMove)
   window.addEventListener('click', onClick, false)
 
@@ -589,7 +591,7 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
 
   backButtonText.position.x = controlPanelWidth / 2 - backButtonGeometryWidth / 2 - (backButtonTextGeometry.boundingBox.max.x - backButtonTextGeometry.boundingBox.min.x) / 2 - padding
   backButtonText.position.y = -controlPanelHeight / 2 + backButtonGeometryHeight / 2 - (backButtonTextGeometry.boundingBox.max.y - backButtonTextGeometry.boundingBox.min.y) / 2 + padding
-  backButtonText.position.z = 0.7
+  backButtonText.position.z = 0.61
 
   backButton.add(backButtonBackground, backButtonText)
   backButton.position.set(controlPanel.position.x, controlPanel.position.y, controlPanel.position.z)
@@ -625,6 +627,34 @@ function onPointerMove (event) {
   pointer.x = (event.clientX / sizes.width) * 2 - 1
   pointer.y = -(event.clientY / sizes.height) * 2 + 1
 
+  checkForObjectHover()
+}
+
+/**
+   *  Animation loop
+   */
+const clock = new THREE.Clock()
+
+const tick = () => {
+  stats.update()
+
+  // Composer
+  composer.render()
+
+  // Controls
+  controls.update()
+
+  // Model animation
+  model.position.y = 0.25 * Math.sin(clock.getElapsedTime() * 2)
+
+  // Control panel animation
+  controlPanel.position.y = controlPanel.position.y + 0.01 * Math.sin(clock.getElapsedTime() * 2)
+  controlPanelText.position.y = controlPanelText.position.y + 0.01 * Math.sin(clock.getElapsedTime() * 2)
+  backButton.position.y = backButton.position.y + 0.01 * Math.sin(clock.getElapsedTime() * 2)
+  window.requestAnimationFrame(tick)
+}
+
+function checkForObjectHover () {
   raycaster.setFromCamera(pointer, camera)
   const intersects = raycaster.intersectObjects(scene.children)
 
@@ -655,32 +685,6 @@ function onPointerMove (event) {
   }
 }
 
-/**
-   *  Animation loop
-   */
-const clock = new THREE.Clock()
-
-const tick = () => {
-  stats.update()
-
-  // Composer
-  composer.render()
-
-  // Controls
-  controls.update()
-
-  // Model animation
-  model.position.y = 0.25 * Math.sin(clock.getElapsedTime() * 2)
-
-  // Control panel animation
-  controlPanel.position.y = controlPanel.position.y + 0.01 * Math.sin(clock.getElapsedTime() * 2)
-  controlPanelText.position.y = controlPanelText.position.y + 0.01 * Math.sin(clock.getElapsedTime() * 2)
-  backButton.position.y = backButton.position.y + 0.01 * Math.sin(clock.getElapsedTime() * 2)
-  window.requestAnimationFrame(tick)
-}
-
-let controlPanelFocused = false
-
 function onClick () {
   raycaster.setFromCamera(pointer, camera)
   const intersects = raycaster.intersectObjects(scene.children)
@@ -698,8 +702,7 @@ function onClick () {
           outlinePass.selectedObjects = []
           controls.enableRotate = false
           controls.enableZoom = false
-        },
-        onComplete: () => {
+
           gsap.to(controls.target, {
             x: 0,
             y: 0,
@@ -707,14 +710,14 @@ function onClick () {
             duration: 1.5,
             ease: 'power1.inOut',
             onComplete: () => {
-              window.addEventListener('click', onClick, false)
             }
           })
         },
+        onComplete: () => {
+          window.addEventListener('click', onClick, false)
+        },
         ease: 'power1.inOut'
       })
-
-      controlPanelFocused = true
     } else if (intersects[0].object.parent === backButton) {
       gsap.to(camera.position, {
         x: 0,
@@ -748,17 +751,13 @@ function onClick () {
         },
         ease: 'power1.inOut'
       })
-
-      controlPanelFocused = false
     }
 
     // Toggle switches
-    if (controlPanelFocused) {
-      const toggleSwitchIndex = toggleSwitches.map(toggleSwitch => toggleSwitch.toggleSwitch).indexOf(intersects[0].object.parent)
+    const toggleSwitchIndex = toggleSwitches.map(toggleSwitch => toggleSwitch.toggleSwitch).indexOf(intersects[0].object.parent)
 
-      if (toggleSwitchIndex > -1) {
-        toggleSwitches[toggleSwitchIndex].toggle()
-      }
+    if (toggleSwitchIndex > -1) {
+      toggleSwitches[toggleSwitchIndex].toggle()
     }
   }
 }
