@@ -9,7 +9,6 @@ import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer'
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass'
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass'
-import * as dat from 'dat.gui'
 
 const gltfPath = './gltfs/01.gltf'
 
@@ -131,10 +130,6 @@ loadingManager.onProgress = (url, loaded, total) => {
 }
 
 loadingManager.onLoad = () => {
-  controls.addEventListener('change', () => {
-    checkForObjectHover()
-  })
-
   window.addEventListener('pointermove', onPointerMove)
   window.addEventListener('click', onClick, false)
 
@@ -217,9 +212,6 @@ gltfLoader.load(
   }
 )
 
-// const axisHelper = new THREE.AxesHelper(50)
-// scene.add(axisHelper)
-
 /**
  * Light
  */
@@ -239,20 +231,20 @@ for (let i = 0; i < pointLightsCount; i++) {
 
 const spotLights = []
 
-const spotLightAmbient = new THREE.SpotLight(0xffffff)
+const spotLightAmbient = new THREE.SpotLight(0xffffff, 0.512)
 spotLightAmbient.position.set(6, -149, -49)
 scene.add(spotLightAmbient)
 
-const spotLightLeft = new THREE.SpotLight(0xffffff)
-spotLightLeft.position.set(-15, 25, 10)
-spotLights.push(spotLightLeft)
-
 const spotLightRight = new THREE.SpotLight(0xffffff)
-spotLightRight.position.set(15, 25, 10)
+spotLightRight.position.set(15, 15, 15)
 spotLights.push(spotLightRight)
 
-const spotLightFront = new THREE.SpotLight(0xffffff)
-spotLightFront.position.set(0, 15, 25)
+const spotLightLeft = new THREE.SpotLight(0xffffff)
+spotLightLeft.position.set(-15, 15, 15)
+spotLights.push(spotLightLeft)
+
+const spotLightFront = new THREE.SpotLight(0xffffff, 0.5)
+spotLightFront.position.set(0, 250, 0)
 spotLights.push(spotLightFront)
 
 /**
@@ -377,44 +369,6 @@ modelCapsule.position.y = capsuleCylinderHeight + modelCapsuleGeometryLenght / 2
 showcase.add(modelCapsule)
 
 /**
- * Debug
- */
-const gui = new dat.GUI()
-
-gui.add(baseBoardMaterial, 'roughness', 0, 1, 0.001)
-gui.add(baseBoardMaterial, 'metalness', 0, 1, 0.001)
-
-const roomFolder = gui.addFolder('Room')
-
-roomFolder
-  .addColor(colors, 'room')
-  .onChange(() => {
-    roomMaterial.color.setHex(colors.room)
-  })
-
-roomFolder.add(roomMaterial, 'metalness', 0, 1, 0.001)
-roomFolder.add(roomMaterial, 'roughness', 0, 1, 0.001)
-
-const showcaseFolder = gui.addFolder('Showcase')
-showcaseFolder.add(highQualityCapsuleMaterial, 'roughness', 0, 1, 0.001)
-showcaseFolder.add(highQualityCapsuleMaterial, 'metalness', 0, 1, 0.001)
-showcaseFolder.add(highQualityCapsuleMaterial, 'thickness', 0, 1, 0.001)
-
-const lightFolder = gui.addFolder('Lights')
-
-lightFolder.add(spotLightAmbient.position, 'x', -250, 250, 1)
-lightFolder.add(spotLightAmbient.position, 'y', -250, 250, 1)
-lightFolder.add(spotLightAmbient.position, 'z', -250, 250, 1)
-
-lightFolder.add(spotLightRight.position, 'x', -250, 250, 1)
-lightFolder.add(spotLightRight.position, 'y', -250, 250, 1)
-lightFolder.add(spotLightRight.position, 'z', -250, 250, 1)
-
-lightFolder.add(spotLightFront.position, 'x', -250, 250, 1)
-lightFolder.add(spotLightFront.position, 'y', -250, 250, 1)
-lightFolder.add(spotLightFront.position, 'z', -250, 250, 1)
-
-/**
  * Control Panel
  */
 const controlPanelWidth = 24
@@ -460,7 +414,7 @@ const controlPanelButtonBackgroundGeometry = new THREE.BoxBufferGeometry(control
 const controlPanelButtonBackground = new THREE.Mesh(controlPanelButtonBackgroundGeometry, standMaterial)
 
 const controlPanelButtonCylinderHeight = floorPositionY + controlPanelButtonGeometryHeight / 2
-const controlPanelButtonCylinderGeometry = new THREE.CylinderBufferGeometry(0.1, 0.05, controlPanelButtonCylinderHeight, 32, 32)
+const controlPanelButtonCylinderGeometry = new THREE.CylinderBufferGeometry(0.05, 0.1, controlPanelButtonCylinderHeight, 32, 32)
 const controlPanelButtonCylinder = new THREE.Mesh(controlPanelButtonCylinderGeometry, standMaterial)
 controlPanelButtonCylinder.position.y = controlPanelButtonCylinderHeight + boxHeight / 2 + 4
 controlPanelButtonCylinder.position.x = 8
@@ -499,7 +453,7 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
   const rowCount = 4
 
   for (let i = 0; i < rowCount; i++) {
-    const spotlightTextGeometry = new TextGeometry(i === rowCount - 1 ? 'High Quality' : 'Spotlight ' + (rowCount - 1 - i), {
+    const spotlightTextGeometry = new TextGeometry(i === rowCount - 1 ? 'High Quality' : i === rowCount - 2 ? 'Spotlight Ambient' : i === rowCount - 3 ? 'Spotlight Left' : 'Spotlight Right', {
       font,
       size: 0.5,
       height: 0.1,
