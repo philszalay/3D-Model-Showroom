@@ -4,7 +4,6 @@ import gsap from 'gsap'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader'
-import Stats from 'three/examples/jsm/libs/stats.module'
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer'
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass'
@@ -64,14 +63,6 @@ scene.add(backButton)
 
 const controlPanelButton = new THREE.Group()
 scene.add(controlPanelButton)
-
-/**
- * Stats
- */
-const stats = Stats()
-stats.domElement.style.position = 'absolute'
-stats.domElement.style.top = '0px'
-document.body.appendChild(stats.domElement)
 
 /**
  * Camera
@@ -440,12 +431,12 @@ scene.add(controlPanelBox)
 const toggleSwitches = []
 
 const fontLoader = new FontLoader(loadingManager)
-fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
+fontLoader.load('./fonts/LoRes_15_OT_Narrow_Regular.typeface.json', (font) => {
   const textMaterial = new THREE.MeshToonMaterial()
 
   const settingsTextGeometry = new TextGeometry('Control Panel', {
     font,
-    size: 1,
+    size: 1.2,
     height: 0.1,
     curveSegments: 12
   })
@@ -465,7 +456,7 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
   for (let i = 0; i < rowCount; i++) {
     const spotlightTextGeometry = new TextGeometry(i === rowCount - 1 ? 'High Quality' : i === rowCount - 2 ? 'Spotlight Ambient' : i === rowCount - 3 ? 'Spotlight Left' : 'Spotlight Right', {
       font,
-      size: 0.5,
+      size: 0.7,
       height: 0.1,
       curveSegments: 12
     })
@@ -544,7 +535,7 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
 
   const backButtonTextGeometry = new TextGeometry('Back', {
     font,
-    size: 0.5,
+    size: 0.7,
     height: 0.1,
     curveSegments: 12
   })
@@ -567,7 +558,7 @@ fontLoader.load('./fonts/droid_sans_regular.typeface.json', (font) => {
    */
   const controlPanelButtonTextGeometry = new TextGeometry('Control Panel', {
     font,
-    size: 0.5,
+    size: 0.7,
     height: 0.1,
     curveSegments: 12
   })
@@ -601,8 +592,6 @@ function onPointerMove (event) {
 const clock = new THREE.Clock()
 
 const tick = () => {
-  stats.update()
-
   // Composer
   composer.render()
 

@@ -24,14 +24,13 @@ module.exports = {
       }),
       new MiniCSSExtractPlugin()
     ],
-  module:
-  {
+  module: {
     rules:
       [
         // HTML
         {
           test: /\.(html)$/,
-          use: ['html-loader']
+          loader: 'html-loader'
         },
 
         // JS
@@ -51,36 +50,6 @@ module.exports = {
             [
               MiniCSSExtractPlugin.loader,
               'css-loader'
-            ]
-        },
-
-        // Images
-        {
-          test: /\.(jpg|png|gif|svg|bin|gltf|hdri|hdr)$/,
-          use:
-            [
-              {
-                loader: 'file-loader',
-                options:
-                {
-                  outputPath: 'assets/images/'
-                }
-              }
-            ]
-        },
-
-        // Fonts
-        {
-          test: /\.(ttf|eot|woff|woff2)$/,
-          use:
-            [
-              {
-                loader: 'file-loader',
-                options:
-                {
-                  outputPath: 'assets/fonts/'
-                }
-              }
             ]
         }
       ]
