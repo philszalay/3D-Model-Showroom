@@ -115,6 +115,7 @@ controls.minDistance = 2
  * Loading Manager
  */
 const loadingManager = new THREE.LoadingManager()
+const footer = document.querySelector('.footer')
 const loadingAnimationContainer = document.querySelector('.loading-animation-container')
 const progressBar = document.querySelector('.bar')
 const progressAnimationPercentage = document.getElementById('loading-animation-percentage')
@@ -133,6 +134,7 @@ loadingManager.onProgress = (url, loaded, total) => {
 loadingManager.onLoad = () => {
   window.addEventListener('pointermove', onPointerMove)
   window.addEventListener('click', onClick, false)
+  window.addEventListener('touchstart', onClick, false)
 
   setTimeout(() => {
     loadingAnimationContainer.style.display = 'none'
@@ -651,7 +653,9 @@ function onClick () {
         z: controlPanel.position.z + 10,
         duration: 1.5,
         onStart: () => {
+          footer.style.display = 'none'
           window.removeEventListener('click', onClick, false)
+          window.removeEventListener('touchstart', onClick, false)
           outlinePass.selectedObjects = []
           controls.enableRotate = false
           controls.enableZoom = false
@@ -668,6 +672,7 @@ function onClick () {
         },
         onComplete: () => {
           window.addEventListener('click', onClick, false)
+          window.addEventListener('touchstart', onClick, false)
         },
         ease: 'power1.inOut'
       })
@@ -679,6 +684,7 @@ function onClick () {
         duration: 1,
         onStart: () => {
           window.removeEventListener('click', onClick, false)
+          window.removeEventListener('touchstart', onClick, false)
           outlinePass.selectedObjects = []
           gsap.to(controls.target, {
             x: model.position.x,
@@ -698,7 +704,9 @@ function onClick () {
             onComplete: () => {
               controls.enableRotate = true
               controls.enableZoom = true
+              footer.style.display = 'flex'
               window.addEventListener('click', onClick, false)
+              window.addEventListener('touchstart', onClick, false)
             }
           })
         },
