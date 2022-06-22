@@ -9,7 +9,13 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass'
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass'
 
-const gltfPath = './gltfs/01.gltf'
+import sl2qedtp_8K_Normal from '../assets/textures/sl2qedtp_8K_Normal.jpg'
+import TexturesCom_Marble_TilesSquare_512_normal from '../assets/textures/TexturesCom_Marble_TilesSquare_512_normal.png'
+import TexturesCom_Marble_TilesSquare_512_albedo from '../assets/textures/TexturesCom_Marble_TilesSquare_512_albedo.png'
+import TexturesCom_Marble_TilesSquare_512_roughness from '../assets/textures/TexturesCom_Marble_TilesSquare_512_roughness.png'
+import LoRes_15_OT_Narrow_Regular from '../assets/fonts/LoRes_15_OT_Narrow_Regular.typeface.json'
+import gltf from '../assets/gltfs/01.gltf'
+import gltfData from '../assets/gltfs/01_data.bin'
 
 /**
  * Colors
@@ -167,10 +173,10 @@ loadingManager.onError = (e) => {
  * Textures
  */
 const textureLoader = new THREE.TextureLoader(loadingManager)
-const floorTextureNormal = textureLoader.load('./textures/sl2qedtp_8K_Normal.jpg')
-const standTextureNormal = textureLoader.load('./textures/TexturesCom_Marble_TilesSquare_512_normal.png')
-const standTexture = textureLoader.load('./textures/TexturesCom_Marble_TilesSquare_512_albedo.png')
-const standTextureRoughness = textureLoader.load('./textures/TexturesCom_Marble_TilesSquare_512_roughness.png')
+const floorTextureNormal = textureLoader.load(sl2qedtp_8K_Normal)
+const standTextureNormal = textureLoader.load(TexturesCom_Marble_TilesSquare_512_normal)
+const standTexture = textureLoader.load(TexturesCom_Marble_TilesSquare_512_albedo)
+const standTextureRoughness = textureLoader.load(TexturesCom_Marble_TilesSquare_512_roughness)
 
 /**
  * glTF Loader
@@ -208,7 +214,7 @@ window.addEventListener('dblclick', () => {
 let model
 
 gltfLoader.load(
-  gltfPath,
+  gltf,
   function (gltf) {
     model = gltf.scene
     scene.add(model)
@@ -433,147 +439,147 @@ scene.add(controlPanelBox)
 const toggleSwitches = []
 
 const fontLoader = new FontLoader(loadingManager)
-fontLoader.load('./fonts/LoRes_15_OT_Narrow_Regular.typeface.json', (font) => {
-  const textMaterial = new THREE.MeshToonMaterial()
+const font = fontLoader.parse(LoRes_15_OT_Narrow_Regular)
 
-  const settingsTextGeometry = new TextGeometry('Control Panel', {
+const textMaterial = new THREE.MeshToonMaterial()
+
+const settingsTextGeometry = new TextGeometry('Control Panel', {
+  font,
+  size: 1.2,
+  height: 0.1,
+  curveSegments: 12
+})
+
+settingsTextGeometry.computeBoundingBox()
+
+const settingsText = new THREE.Mesh(settingsTextGeometry, textMaterial)
+
+settingsText.position.x = -(settingsTextGeometry.boundingBox.max.x - settingsTextGeometry.boundingBox.min.x) / 2
+settingsText.position.y = 2.5
+settingsText.position.z = 0.5
+
+controlPanelText.add(settingsText)
+
+const rowCount = 4
+
+for (let i = 0; i < rowCount; i++) {
+  const spotlightTextGeometry = new TextGeometry(i === rowCount - 1 ? 'High Quality' : i === rowCount - 2 ? 'Spotlight Ambient' : i === rowCount - 3 ? 'Spotlight Left' : 'Spotlight Right', {
     font,
-    size: 1.2,
+    size: 0.7,
     height: 0.1,
     curveSegments: 12
   })
 
-  settingsTextGeometry.computeBoundingBox()
+  spotlightTextGeometry.computeBoundingBox()
 
-  const settingsText = new THREE.Mesh(settingsTextGeometry, textMaterial)
+  const spotlightText = new THREE.Mesh(spotlightTextGeometry, textMaterial)
+  spotlightText.position.x = -controlPanelWidth / 2 + padding
+  spotlightText.position.y = -controlPanelHeight / 2 + (spotlightTextGeometry.boundingBox.max.y - settingsTextGeometry.boundingBox.min.y) / 2 + i + padding
+  spotlightText.position.z = 0.5
 
-  settingsText.position.x = -(settingsTextGeometry.boundingBox.max.x - settingsTextGeometry.boundingBox.min.x) / 2
-  settingsText.position.y = 2.5
-  settingsText.position.z = 0.5
+  const capsuleMaterial = new THREE.MeshNormalMaterial({
+    transparent: true,
+    opacity: 0.2
+  })
 
-  controlPanelText.add(settingsText)
+  const capsuleWidth = 1
+  const capsuleRadius = 0.3
+  const capsuleGeometry = new THREE.CapsuleGeometry(capsuleRadius, capsuleWidth, 8, 8)
 
-  const rowCount = 4
+  const capsule = new THREE.Mesh(capsuleGeometry, capsuleMaterial)
 
-  for (let i = 0; i < rowCount; i++) {
-    const spotlightTextGeometry = new TextGeometry(i === rowCount - 1 ? 'High Quality' : i === rowCount - 2 ? 'Spotlight Ambient' : i === rowCount - 3 ? 'Spotlight Left' : 'Spotlight Right', {
-      font,
-      size: 0.7,
-      height: 0.1,
-      curveSegments: 12
-    })
+  const capsuleOffset = 0
 
-    spotlightTextGeometry.computeBoundingBox()
+  capsule.position.x = capsuleWidth / 2 + capsuleOffset
+  capsule.position.y = spotlightText.position.y + capsuleRadius / 2
+  capsule.position.z = 0.6
+  capsule.rotation.z = -Math.PI / 2
 
-    const spotlightText = new THREE.Mesh(spotlightTextGeometry, textMaterial)
-    spotlightText.position.x = -controlPanelWidth / 2 + padding
-    spotlightText.position.y = -controlPanelHeight / 2 + (spotlightTextGeometry.boundingBox.max.y - settingsTextGeometry.boundingBox.min.y) / 2 + i + padding
-    spotlightText.position.z = 0.5
+  const sphrereGeometryRadius = 0.2
+  const sphereGeometry = new THREE.SphereGeometry(sphrereGeometryRadius, 8, 8)
+  const sphere = new THREE.Mesh(sphereGeometry, textMaterial)
 
-    const capsuleMaterial = new THREE.MeshNormalMaterial({
-      transparent: true,
-      opacity: 0.2
-    })
+  sphere.position.x = sphrereGeometryRadius / 2 + capsuleOffset
+  sphere.position.y = spotlightText.position.y + capsuleRadius / 2
+  sphere.position.z = 0.6
 
-    const capsuleWidth = 1
-    const capsuleRadius = 0.3
-    const capsuleGeometry = new THREE.CapsuleGeometry(capsuleRadius, capsuleWidth, 8, 8)
+  const toggle = function () {
+    this.active = !this.active
 
-    const capsule = new THREE.Mesh(capsuleGeometry, capsuleMaterial)
-
-    const capsuleOffset = 0
-
-    capsule.position.x = capsuleWidth / 2 + capsuleOffset
-    capsule.position.y = spotlightText.position.y + capsuleRadius / 2
-    capsule.position.z = 0.6
-    capsule.rotation.z = -Math.PI / 2
-
-    const sphrereGeometryRadius = 0.2
-    const sphereGeometry = new THREE.SphereGeometry(sphrereGeometryRadius, 8, 8)
-    const sphere = new THREE.Mesh(sphereGeometry, textMaterial)
-
-    sphere.position.x = sphrereGeometryRadius / 2 + capsuleOffset
-    sphere.position.y = spotlightText.position.y + capsuleRadius / 2
-    sphere.position.z = 0.6
-
-    const toggle = function () {
-      this.active = !this.active
-
-      if (this.index === rowCount - 1) {
-        if (this.active) {
-          modelCapsule.material = highQualityCapsuleMaterial
-        } else {
-          modelCapsule.material = lowQualityCapsuleMaterial
-        }
+    if (this.index === rowCount - 1) {
+      if (this.active) {
+        modelCapsule.material = highQualityCapsuleMaterial
       } else {
-        this.active ? scene.add(spotLights[this.index]) : scene.remove(spotLights[this.index])
+        modelCapsule.material = lowQualityCapsuleMaterial
       }
-
-      const newPositionX = this.active ? capsuleWidth - sphrereGeometryRadius / 2 + capsuleOffset : sphrereGeometryRadius / 2 + capsuleOffset
-
-      gsap.to(sphere.position, {
-        x: newPositionX,
-        duration: 0.5,
-        ease: 'power1.inOut'
-      })
+    } else {
+      this.active ? scene.add(spotLights[this.index]) : scene.remove(spotLights[this.index])
     }
 
-    const toggleSwitch = new THREE.Group()
-    toggleSwitch.add(capsule, sphere)
+    const newPositionX = this.active ? capsuleWidth - sphrereGeometryRadius / 2 + capsuleOffset : sphrereGeometryRadius / 2 + capsuleOffset
 
-    toggleSwitches.push({
-      toggleSwitch,
-      index: i,
-      active: false,
-      toggle
+    gsap.to(sphere.position, {
+      x: newPositionX,
+      duration: 0.5,
+      ease: 'power1.inOut'
     })
-
-    controlPanelText.add(spotlightText, toggleSwitch)
   }
 
-  controlPanelText.position.set(controlPanel.position.x, controlPanel.position.y, controlPanel.position.z)
-  controlPanelText.rotation.y = Math.atan(controlPanelText.position.z / controlPanelText.position.x)
-  controlPanelText.rotateOnWorldAxis(new THREE.Vector3(1, 0, -1).normalize(), -Math.atan(controlPanelText.position.y / controlPanelText.position.z))
+  const toggleSwitch = new THREE.Group()
+  toggleSwitch.add(capsule, sphere)
 
-  const backButtonTextGeometry = new TextGeometry('Back', {
-    font,
-    size: 0.7,
-    height: 0.1,
-    curveSegments: 12
+  toggleSwitches.push({
+    toggleSwitch,
+    index: i,
+    active: false,
+    toggle
   })
 
-  backButtonTextGeometry.computeBoundingBox()
+  controlPanelText.add(spotlightText, toggleSwitch)
+}
 
-  const backButtonText = new THREE.Mesh(backButtonTextGeometry, textMaterial)
+controlPanelText.position.set(controlPanel.position.x, controlPanel.position.y, controlPanel.position.z)
+controlPanelText.rotation.y = Math.atan(controlPanelText.position.z / controlPanelText.position.x)
+controlPanelText.rotateOnWorldAxis(new THREE.Vector3(1, 0, -1).normalize(), -Math.atan(controlPanelText.position.y / controlPanelText.position.z))
 
-  backButtonText.position.x = controlPanelWidth / 2 - backButtonGeometryWidth / 2 - (backButtonTextGeometry.boundingBox.max.x - backButtonTextGeometry.boundingBox.min.x) / 2 - padding
-  backButtonText.position.y = -controlPanelHeight / 2 + backButtonGeometryHeight / 2 - (backButtonTextGeometry.boundingBox.max.y - backButtonTextGeometry.boundingBox.min.y) / 2 + padding
-  backButtonText.position.z = 0.61
+const backButtonTextGeometry = new TextGeometry('Back', {
+  font,
+  size: 0.7,
+  height: 0.1,
+  curveSegments: 12
+})
 
-  backButton.add(backButtonBackground, backButtonText)
-  backButton.position.set(controlPanel.position.x, controlPanel.position.y, controlPanel.position.z)
-  backButton.rotation.y = Math.atan(controlPanelText.position.z / controlPanelText.position.x)
-  backButton.rotateOnWorldAxis(new THREE.Vector3(1, 0, -1).normalize(), -Math.atan(controlPanelText.position.y / controlPanelText.position.z))
+backButtonTextGeometry.computeBoundingBox()
 
-  /**
+const backButtonText = new THREE.Mesh(backButtonTextGeometry, textMaterial)
+
+backButtonText.position.x = controlPanelWidth / 2 - backButtonGeometryWidth / 2 - (backButtonTextGeometry.boundingBox.max.x - backButtonTextGeometry.boundingBox.min.x) / 2 - padding
+backButtonText.position.y = -controlPanelHeight / 2 + backButtonGeometryHeight / 2 - (backButtonTextGeometry.boundingBox.max.y - backButtonTextGeometry.boundingBox.min.y) / 2 + padding
+backButtonText.position.z = 0.61
+
+backButton.add(backButtonBackground, backButtonText)
+backButton.position.set(controlPanel.position.x, controlPanel.position.y, controlPanel.position.z)
+backButton.rotation.y = Math.atan(controlPanelText.position.z / controlPanelText.position.x)
+backButton.rotateOnWorldAxis(new THREE.Vector3(1, 0, -1).normalize(), -Math.atan(controlPanelText.position.y / controlPanelText.position.z))
+
+/**
    * Control panel button
    */
-  const controlPanelButtonTextGeometry = new TextGeometry('Control Panel', {
-    font,
-    size: 0.7,
-    height: 0.1,
-    curveSegments: 12
-  })
-
-  controlPanelButtonTextGeometry.center()
-
-  const controlPanelButtonText = new THREE.Mesh(controlPanelButtonTextGeometry, textMaterial)
-  controlPanelButtonText.position.z = 0.1
-
-  controlPanelButton.add(controlPanelButtonBackground, controlPanelButtonText)
-  controlPanelButton.position.set(8, -5, 0)
-  controlPanelButton.rotateX(-Math.PI / 8)
+const controlPanelButtonTextGeometry = new TextGeometry('Control Panel', {
+  font,
+  size: 0.7,
+  height: 0.1,
+  curveSegments: 12
 })
+
+controlPanelButtonTextGeometry.center()
+
+const controlPanelButtonText = new THREE.Mesh(controlPanelButtonTextGeometry, textMaterial)
+controlPanelButtonText.position.z = 0.1
+
+controlPanelButton.add(controlPanelButtonBackground, controlPanelButtonText)
+controlPanelButton.position.set(8, -5, 0)
+controlPanelButton.rotateX(-Math.PI / 8)
 
 /**
  * Raycaster
