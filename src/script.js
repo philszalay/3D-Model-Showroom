@@ -63,13 +63,16 @@ showcase.position.y = floorPositionY
 scene.add(showcase)
 
 const controlPanelText = new THREE.Group()
-scene.add(controlPanelText)
 
 const backButton = new THREE.Group()
-scene.add(backButton)
 
 const controlPanelButton = new THREE.Group()
-scene.add(controlPanelButton)
+
+const interactiveObjects = new THREE.Group()
+interactiveObjects.add(backButton)
+interactiveObjects.add(controlPanelButton)
+interactiveObjects.add(controlPanelText)
+scene.add(interactiveObjects)
 
 /**
  * Camera
@@ -619,7 +622,7 @@ const tick = () => {
 
 function checkForObjectHover () {
   raycaster.setFromCamera(pointer, camera)
-  const intersects = raycaster.intersectObjects(scene.children)
+  const intersects = raycaster.intersectObjects(interactiveObjects.children)
 
   if (intersects.length) {
     switch (intersects[0].object.parent) {
@@ -645,12 +648,14 @@ function checkForObjectHover () {
         outlinePass.selectedObjects = []
         break
     }
+  } else {
+    outlinePass.selectedObjects = []
   }
 }
 
 function onClick () {
   raycaster.setFromCamera(pointer, camera)
-  const intersects = raycaster.intersectObjects(scene.children)
+  const intersects = raycaster.intersectObjects(interactiveObjects.children)
 
   if (intersects.length) {
     if (intersects[0].object.parent === controlPanelButton) {
