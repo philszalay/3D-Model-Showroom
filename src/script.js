@@ -16,6 +16,7 @@ import TexturesCom_Marble_TilesSquare_512_roughness from '../assets/textures/Tex
 import LoRes_15_OT_Narrow_Regular from '../assets/fonts/LoRes_15_OT_Narrow_Regular.typeface.json'
 import gltf from '../assets/gltfs/01.gltf'
 import gltfData from '../assets/gltfs/01_data.bin'
+import previewImage from '../assets/images/preview_image.png'
 
 /**
  * Colors
