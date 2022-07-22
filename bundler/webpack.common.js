@@ -9,7 +9,7 @@ module.exports = (env, argv) => {
     {
       filename: 'bundle.[contenthash].js',
       path: path.resolve(__dirname, '../dist'),
-      publicPath: argv.mode === 'production' ? '/3D-Model-Showroom/' : '/'
+      publicPath: argv.mode === 'production' ? '/threejs-model-showroom/' : '/'
     },
     devtool: 'source-map',
     plugins:

@@ -199,9 +199,6 @@ window.addEventListener('resize', () => {
 
   renderer.setSize(sizes.width, sizes.height)
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-
-  composer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-  composer.setSize(sizes.width, sizes.height)
 }, false)
 
 window.addEventListener('dblclick', () => {

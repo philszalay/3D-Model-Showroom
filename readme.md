@@ -1,5 +1,5 @@
 # 3D Model Showroom
-https://philszalay.github.io/3D-Model-Showroom/
+https://philszalay.github.io/threejs-model-showroom/
 
 ## Setup
 Download [Node.js 16](https://nodejs.org/en/download/).
